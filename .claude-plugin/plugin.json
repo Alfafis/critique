@@ -1,10 +1,14 @@
 {
   "name": "critique",
   "description": "Permanent critical mindset mode. Surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact, no sugarcoating.",
+  "version": "1.0.0",
   "author": {
     "name": "Alfafis",
     "url": "https://github.com/Alfafis"
   },
+  "homepage": "https://github.com/Alfafis/critique",
+  "license": "MIT",
+  "skills": ["./plugins/critique/skills"],
   "hooks": {
     "SessionStart": [
       {
