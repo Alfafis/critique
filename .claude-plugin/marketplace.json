@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "critique",
+  "description": "Permanent critical mindset for Claude Code — surfaces real bugs, questionable decisions, and unhandled edge cases, ordered by impact.",
+  "owner": {
+    "name": "Alfafis",
+    "url": "https://github.com/Alfafis"
+  },
+  "plugins": [
+    {
+      "name": "critique",
+      "description": "Permanent critical mindset mode. Surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact, no sugarcoating.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}
