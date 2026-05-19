@@ -48,8 +48,9 @@
   --t-instant: 150ms; --t-fast: 200ms;
 
   --nav-h: 44px;
-  --max-w: 720px;
-  --gap: 24px;
+  --max-w: 1100px;
+  --gap: 40px;
+  --section-py: 80px;
 
   font-family: 'Geist', -apple-system, Inter, system-ui, sans-serif;
   font-size: 16px;
@@ -70,7 +71,8 @@ pre, code { font-family: 'Geist Mono', 'Fira Code', ui-monospace, monospace; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-xs); }
 
 /* ── LAYOUT ───────────────────────────────── */
-.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gap); }
+.wrap        { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gap); }
+.wrap--narrow { max-width: 700px; margin: 0 auto; padding: 0 var(--gap); }
 
 /* ── SCANLINES ────────────────────────────── */
 body::before {
@@ -184,7 +186,7 @@ body::before {
 .btn-ghost:active { background: var(--surface-muted); }
 
 /* ── SECTION BASE ─────────────────────────── */
-.section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+.section { padding: var(--section-py) 0; border-bottom: 1px solid var(--border); }
 
 .section-label {
   font-size: var(--xs); font-weight: 500; color: var(--text-inverse);
@@ -403,14 +405,35 @@ body::before {
 .reveal.in { opacity: 1; transform: none; }
 
 /* ── RESPONSIVE ───────────────────────────── */
-@media (max-width: 640px) {
-  :root { --d3: 36px; --d2: 28px; --d1: 22px; --gap: 16px; }
-  .hero { padding-top: calc(var(--nav-h) + 52px); padding-bottom: 56px; }
+
+/* Wide: 1280px+ */
+@media (min-width: 1280px) {
+  :root { --gap: 56px; --section-py: 96px; }
+  .hero { padding-top: calc(var(--nav-h) + 120px); padding-bottom: 120px; }
+  .hero h1 { font-size: var(--d3); max-width: 740px; }
+  .hero-sub { max-width: 540px; }
+}
+
+/* Desktop: 1024px–1279px */
+@media (min-width: 1024px) and (max-width: 1279px) {
+  :root { --gap: 48px; --section-py: 80px; }
+  .hero { padding-top: calc(var(--nav-h) + 96px); padding-bottom: 96px; }
+}
+
+/* Tablet: 640px–1023px */
+@media (max-width: 1023px) {
+  :root { --gap: 32px; --section-py: 64px; }
+  .hero { padding-top: calc(var(--nav-h) + 64px); padding-bottom: 72px; }
+}
+
+/* Mobile: <640px */
+@media (max-width: 639px) {
+  :root { --d3: 32px; --d2: 24px; --d1: 20px; --gap: 16px; --section-py: 48px; }
+  .hero { padding-top: calc(var(--nav-h) + 40px); padding-bottom: 52px; }
   .nav-links li:not(:last-child) { display: none; }
   .demo-grid { grid-template-columns: 1fr; }
   .demo-without { display: none; }
   .pillars-grid { grid-template-columns: 1fr; }
-  .section { padding: 48px 0; }
 }
 </style>
 </head>
@@ -579,7 +602,7 @@ body::before {
 
   <!-- INSTALL -->
   <section class="section" id="install" aria-labelledby="h-install">
-    <div class="wrap">
+    <div class="wrap--narrow">
       <p class="section-label" aria-hidden="true">§ install</p>
       <h2 class="section-title" id="h-install">Get started</h2>
       <p class="section-sub">Two options. Both take under a minute.</p>
