@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — critique</title>
+<meta name="description" content="critique plugin privacy policy">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --text-primary:   oklch(0.97 0.01 80);
+  --text-secondary: oklch(0.82 0.01 80);
+  --text-tertiary:  oklch(0.62 0.008 80);
+  --text-inverse:   oklch(0.48 0.008 80);
+  --surface-base:   #000000;
+  --surface-muted:  oklch(0.16 0.01 60);
+  --border:         oklch(0.28 0.01 60);
+  --accent:         oklch(0.65 0.22 25);
+  --nav-h: 44px;
+  --max-w: 680px;
+  --gap: 40px;
+  font-family: 'Geist', -apple-system, Inter, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+body { background: var(--surface-base); color: var(--text-primary); }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--nav-h); z-index: 100;
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0 0 0 / 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gap);
+}
+
+.nav-logo {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 14px; font-weight: 600;
+  color: var(--accent); letter-spacing: -0.02em;
+  text-decoration: none;
+}
+
+.nav-back {
+  font-size: 12px; color: var(--text-inverse);
+  text-decoration: none; transition: color 0.15s;
+}
+.nav-back:hover { color: var(--text-secondary); text-decoration: none; }
+
+.content {
+  max-width: var(--max-w); margin: 0 auto;
+  padding: calc(var(--nav-h) + 64px) var(--gap) 80px;
+}
+
+.page-label {
+  font-size: 11px; font-weight: 500; color: var(--text-inverse);
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px;
+}
+
+h1 {
+  font-size: 32px; font-weight: 700;
+  letter-spacing: -0.035em; line-height: 1.1;
+  color: var(--text-primary); margin-bottom: 8px;
+}
+
+.updated {
+  font-size: 12px; color: var(--text-inverse); margin-bottom: 48px;
+}
+
+h2 {
+  font-size: 15px; font-weight: 600;
+  color: var(--text-primary); margin: 32px 0 10px;
+}
+
+p {
+  font-size: 14.5px; color: var(--text-secondary);
+  line-height: 1.7; margin-bottom: 12px;
+}
+
+.highlight {
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 6px 6px 0;
+  padding: 14px 18px; margin: 24px 0;
+  font-size: 14.5px; color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 20px var(--gap);
+  max-width: var(--max-w); margin: 0 auto;
+  font-size: 12px; color: var(--text-inverse);
+}
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">
+      <svg width="18" height="18" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="7" fill="var(--surface-muted)"/>
+        <rect x="13.5" y="5.5" width="5" height="14" rx="2.5" fill="var(--accent)"/>
+        <circle cx="16" cy="25.5" r="3" fill="var(--accent)"/>
+      </svg>
+      critique
+    </a>
+    <a href="/" class="nav-back">← back</a>
+  </div>
+</nav>
+
+<main class="content">
+  <p class="page-label">§ legal</p>
+  <h1>Privacy Policy</h1>
+  <p class="updated">Last updated: May 19, 2026</p>
+
+  <div class="highlight">
+    <strong style="color:var(--text-primary)">Short version:</strong> critique collects no data. It runs entirely on your local machine. Nothing is sent anywhere.
+  </div>
+
+  <h2>What this plugin does</h2>
+  <p>
+    critique is a Claude Code plugin that injects a critical mindset into your AI sessions via local hooks and skill definitions. All processing happens inside Claude Code on your machine.
+  </p>
+
+  <h2>Data collection</h2>
+  <p>
+    critique does not collect, store, transmit, or share any personal data, usage data, telemetry, or analytics. There are no network requests, no tracking pixels, and no external services involved.
+  </p>
+
+  <h2>Local files</h2>
+  <p>
+    The plugin writes a temporary flag file (<code style="font-size:13px;background:oklch(0.16 0.01 60);padding:1px 5px;border-radius:3px;color:oklch(0.76 0.12 280)">.critique-active</code>) to your home directory to track session state. This file is read and written only by the plugin hooks running locally. It is never transmitted.
+  </p>
+
+  <h2>Third-party services</h2>
+  <p>
+    This website uses Google Fonts (Geist) loaded from Google's CDN. Google's <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a> applies to that request.
+  </p>
+
+  <h2>Contact</h2>
+  <p>
+    Questions: <a href="https://github.com/Alfafis/critique/issues" target="_blank" rel="noopener noreferrer">open an issue on GitHub</a>.
+  </p>
+</main>
+
+<footer>
+  <a href="/">critique</a> · MIT license
+</footer>
+
+</body>
+</html>
