@@ -46,15 +46,7 @@ Supports focused modes: `/rigorous plan <task>` · `/rigorous sec` · `/rigorous
 
 ## Install
 
-### Claude Code plugin marketplace
-
-```
-/plugin install critique
-```
-
-Or: `/plugin` → Discover → search `critique`.
-
-### Manual (via `extraKnownMarketplaces`)
+### Via `extraKnownMarketplaces` (recommended)
 
 Add to `~/.claude/settings.json`:
 
@@ -71,7 +63,21 @@ Add to `~/.claude/settings.json`:
 }
 ```
 
-Then run `/plugin` → Discover → install `critique`.
+Then install:
+
+```shell
+/plugin install critique@critique
+```
+
+Or: `/plugin` → Discover → search `critique`.
+
+### Claude Code community marketplace (pending review)
+
+```
+/plugin install critique@claude-community
+```
+
+> Not yet available — submission in progress.
 
 ### Statusline badge
 

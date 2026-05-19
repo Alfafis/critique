@@ -7,8 +7,8 @@
     "url": "https://github.com/Alfafis"
   },
   "homepage": "https://github.com/Alfafis/critique",
+  "repository": "https://github.com/Alfafis/critique",
   "license": "MIT",
-  "skills": ["./plugins/critique/skills"],
   "hooks": {
     "SessionStart": [
       {

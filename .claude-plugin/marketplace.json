@@ -11,7 +11,14 @@
       "name": "critique",
       "description": "Permanent critical mindset mode. Surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact, no sugarcoating.",
       "source": "./",
-      "category": "productivity"
+      "category": "productivity",
+      "homepage": "https://github.com/Alfafis/critique",
+      "repository": "https://github.com/Alfafis/critique",
+      "license": "MIT",
+      "author": {
+        "name": "Alfafis"
+      },
+      "keywords": ["critique", "code-review", "critical", "security", "quality", "mindset"]
     }
   ]
 }
