@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>critique — no sugarcoating</title>
+<meta name="description" content="Permanent critical mindset for Claude Code. Real bugs. Questionable decisions. Ordered by impact. No sugarcoating.">
+<meta property="og:title" content="critique — no sugarcoating">
+<meta property="og:description" content="Permanent critical mindset for Claude Code. Real bugs. Questionable decisions. Ordered by impact.">
+<meta property="og:url" content="https://critique.developercorp.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ───────────────────────────────── */
+:root {
+  --text-primary:    oklch(0.97 0.01 80);
+  --text-secondary:  oklch(0.82 0.01 80);
+  --text-tertiary:   oklch(0.62 0.008 80);
+  --text-inverse:    oklch(0.48 0.008 80);
+  --surface-base:    #000000;
+  --surface-muted:   oklch(0.16 0.01 60);
+  --surface-strong:  oklch(0.13 0.008 60);
+  --border:          oklch(0.28 0.01 60);
+  --border-mid:      oklch(0.38 0.01 60);
+  --accent:          oklch(0.65 0.22 25);
+  --accent-dim:      oklch(0.32 0.10 25);
+  --accent-glow:     oklch(0.65 0.22 25 / 0.10);
+  --green:           oklch(0.72 0.18 145);
+  --yellow:          oklch(0.80 0.14 80);
+
+  --xs:   11px;
+  --sm:   11.5px;
+  --md:   12px;
+  --lg:   12.5px;
+  --xl:   13px;
+  --2xl:  13.5px;
+  --3xl:  14px;
+  --4xl:  14.5px;
+  --d1:   28px;
+  --d2:   36px;
+  --d3:   48px;
+
+  --s1: 2px;  --s2: 3px;  --s3: 4px;  --s4: 6px;
+  --s5: 7px;  --s6: 10px; --s7: 11.5px; --s8: 12px;
+
+  --r-xs: 3px; --r-sm: 6px; --r-md: 8px; --r-lg: 999px;
+  --t-instant: 150ms; --t-fast: 200ms;
+
+  --nav-h: 44px;
+  --max-w: 720px;
+  --gap: 24px;
+
+  font-family: 'Geist', -apple-system, Inter, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+/* ── RESET ────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+body { background: var(--surface-base); color: var(--text-primary); }
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; }
+ul { list-style: none; }
+pre, code { font-family: 'Geist Mono', 'Fira Code', ui-monospace, monospace; }
+
+/* ── FOCUS VISIBLE ────────────────────────── */
+:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--r-xs); }
+
+/* ── LAYOUT ───────────────────────────────── */
+.wrap { max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gap); }
+
+/* ── SCANLINES ────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 1px, oklch(1 0 0 / 0.013) 1px, oklch(1 0 0 / 0.013) 2px);
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── NAV ──────────────────────────────────── */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: var(--nav-h);
+  z-index: 100;
+  display: flex; align-items: center;
+  border-bottom: 1px solid var(--border);
+  background: oklch(0 0 0 / 0.85);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; max-width: var(--max-w); margin: 0 auto; padding: 0 var(--gap);
+}
+
+.nav-logo {
+  font-size: var(--xl); font-weight: 600;
+  color: var(--accent); letter-spacing: -0.02em;
+}
+
+.nav-links { display: flex; align-items: center; gap: 4px; }
+
+.nav-links a {
+  font-size: var(--md); color: var(--text-tertiary);
+  padding: var(--s2) var(--s6); border-radius: var(--r-sm);
+  transition: color var(--t-instant), background var(--t-instant);
+}
+.nav-links a:hover { color: var(--text-secondary); background: var(--surface-muted); }
+
+.nav-gh {
+  display: flex; align-items: center; gap: var(--s3);
+  margin-left: var(--s4);
+  border: 1px solid var(--border) !important;
+  border-radius: var(--r-sm) !important;
+  padding: var(--s2) var(--s8) !important;
+}
+.nav-gh:hover { border-color: var(--border-mid) !important; background: transparent !important; }
+
+/* ── HERO ─────────────────────────────────── */
+.hero {
+  padding-top: calc(var(--nav-h) + 80px);
+  padding-bottom: 80px;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero-tag {
+  display: inline-flex; align-items: center; gap: var(--s4);
+  font-size: var(--xs); font-weight: 500;
+  color: var(--accent); background: var(--accent-glow);
+  border: 1px solid var(--accent-dim);
+  padding: var(--s2) var(--s8);
+  border-radius: var(--r-lg);
+  letter-spacing: 0.07em; text-transform: uppercase;
+  margin-bottom: 32px;
+}
+
+.hero-tag::before {
+  content: ''; width: 5px; height: 5px;
+  border-radius: 50%; background: var(--accent);
+  animation: blink 2.4s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+.hero h1 {
+  font-size: var(--d3); font-weight: 700;
+  line-height: 1.07; letter-spacing: -0.045em;
+  color: var(--text-primary); max-width: 600px;
+  margin-bottom: 24px;
+}
+
+.hero h1 em {
+  font-style: normal; color: var(--accent);
+  position: relative;
+}
+
+.hero-sub {
+  font-size: var(--3xl); color: var(--text-tertiary);
+  max-width: 460px; line-height: 1.65; margin-bottom: 36px;
+}
+
+.hero-actions { display: flex; gap: var(--s8); flex-wrap: wrap; align-items: center; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: var(--s4);
+  padding: 8px 16px; border-radius: var(--r-sm);
+  font-size: var(--xl); font-weight: 500; font-family: inherit;
+  transition: background var(--t-instant), border-color var(--t-instant), color var(--t-instant);
+  border: 1px solid transparent;
+}
+.btn-primary { background: var(--accent); color: oklch(0.97 0.01 80); border-color: var(--accent); }
+.btn-primary:hover { background: oklch(0.57 0.22 25); border-color: oklch(0.57 0.22 25); }
+.btn-primary:active { background: oklch(0.50 0.20 25); }
+.btn-ghost { background: transparent; color: var(--text-tertiary); border-color: var(--border); }
+.btn-ghost:hover { color: var(--text-secondary); border-color: var(--border-mid); }
+.btn-ghost:active { background: var(--surface-muted); }
+
+/* ── SECTION BASE ─────────────────────────── */
+.section { padding: 64px 0; border-bottom: 1px solid var(--border); }
+
+.section-label {
+  font-size: var(--xs); font-weight: 500; color: var(--text-inverse);
+  letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 20px;
+  user-select: none;
+}
+
+.section-title {
+  font-size: var(--d1); font-weight: 700;
+  letter-spacing: -0.035em; line-height: 1.1;
+  color: var(--text-primary); margin-bottom: 8px;
+}
+
+.section-sub {
+  font-size: var(--3xl); color: var(--text-tertiary);
+  line-height: 1.6; margin-bottom: 32px;
+}
+
+/* ── DEMO ─────────────────────────────────── */
+.demo-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r-md); overflow: hidden; gap: 1px;
+}
+
+.demo-panel { background: var(--surface-muted); }
+
+.demo-header {
+  display: flex; align-items: center; gap: var(--s8);
+  padding: var(--s8) 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-dots { display: flex; gap: var(--s3); }
+.dot { width: 7px; height: 7px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+
+.demo-label { font-size: var(--xs); color: var(--text-inverse); letter-spacing: 0.04em; }
+
+.demo-body { padding: 16px; font-size: var(--3xl); line-height: 1.65; }
+
+.demo-without .demo-body { color: var(--text-inverse); font-style: italic; }
+
+.finding { margin-bottom: 14px; }
+.finding:last-child { margin-bottom: 0; }
+
+.finding-label {
+  display: flex; align-items: center; gap: var(--s3);
+  font-size: var(--xs); font-weight: 600;
+  letter-spacing: 0.07em; margin-bottom: var(--s3);
+}
+.label-red { color: var(--accent); }
+.label-yellow { color: var(--yellow); }
+
+.finding p { font-size: var(--3xl); color: var(--text-secondary); line-height: 1.55; }
+
+.finding code {
+  font-size: var(--sm);
+  background: var(--surface-strong);
+  color: oklch(0.76 0.12 280);
+  padding: 1px var(--s3); border-radius: var(--r-xs);
+  border: 1px solid var(--border);
+}
+
+/* ── PILLARS ──────────────────────────────── */
+.pillars-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  background: var(--border); border: 1px solid var(--border);
+  border-radius: var(--r-md); overflow: hidden; gap: 1px;
+}
+
+.pillar { background: var(--surface-muted); padding: 20px; }
+
+.pillar-num {
+  font-size: var(--xs); font-weight: 600;
+  color: var(--accent); letter-spacing: 0.08em;
+  margin-bottom: var(--s8);
+}
+
+.pillar h3 {
+  font-size: var(--4xl); font-weight: 600;
+  color: var(--text-primary); letter-spacing: -0.02em;
+  margin-bottom: var(--s6);
+}
+
+.pillar p { font-size: var(--3xl); color: var(--text-tertiary); line-height: 1.6; }
+
+/* ── SKILLS ───────────────────────────────── */
+.skill-card {
+  background: var(--surface-muted);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  padding: 20px; margin-bottom: var(--s8);
+  transition: border-color var(--t-instant);
+}
+.skill-card:last-child { margin-bottom: 0; }
+.skill-card:hover { border-color: var(--border-mid); }
+
+.skill-header { display: flex; align-items: center; gap: var(--s8); margin-bottom: 12px; }
+
+.skill-cmd {
+  font-size: var(--xl); font-weight: 600; color: var(--accent);
+  letter-spacing: -0.01em;
+}
+
+.skill-badge {
+  font-size: var(--xs); font-weight: 500;
+  color: var(--text-inverse); border: 1px solid var(--border);
+  padding: 1px var(--s6); border-radius: var(--r-xs);
+  letter-spacing: 0.06em;
+}
+
+.skill-desc {
+  font-size: var(--3xl); color: var(--text-tertiary);
+  line-height: 1.6; margin-bottom: 14px;
+}
+
+.skill-desc code {
+  font-size: var(--sm);
+  background: var(--surface-strong);
+  color: oklch(0.76 0.12 280);
+  padding: 1px var(--s3); border-radius: var(--r-xs);
+  border: 1px solid var(--border);
+}
+
+.tags { display: flex; flex-wrap: wrap; gap: var(--s4); }
+
+.tag {
+  font-size: var(--xs); color: var(--text-inverse);
+  background: var(--surface-strong); border: 1px solid var(--border);
+  padding: var(--s2) var(--s6); border-radius: var(--r-xs);
+}
+
+/* ── INSTALL ──────────────────────────────── */
+.opt-label {
+  font-size: var(--xs); font-weight: 500;
+  color: var(--text-inverse); letter-spacing: 0.08em;
+  text-transform: uppercase; margin-bottom: var(--s8);
+}
+
+.code-block {
+  background: var(--surface-muted);
+  border: 1px solid var(--border); border-radius: var(--r-md);
+  overflow: hidden; margin-bottom: var(--s8);
+}
+
+.code-block-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--s8) 16px; border-bottom: 1px solid var(--border);
+}
+
+.code-block-name { font-size: var(--xs); color: var(--text-inverse); letter-spacing: 0.04em; }
+
+.copy-btn {
+  font-size: var(--xs); font-weight: 500;
+  color: var(--text-inverse); background: var(--surface-strong);
+  border: 1px solid var(--border); padding: var(--s1) var(--s8);
+  border-radius: var(--r-xs); letter-spacing: 0.04em;
+  transition: color var(--t-instant), border-color var(--t-instant);
+  min-width: 44px;
+}
+.copy-btn:hover { color: var(--text-secondary); border-color: var(--border-mid); }
+.copy-btn.copied { color: var(--green); border-color: oklch(0.42 0.12 145); }
+
+.code-block pre {
+  padding: 16px; font-size: var(--md); line-height: 1.75;
+  color: var(--text-secondary); overflow-x: auto;
+}
+
+.t-k { color: oklch(0.71 0.12 220); }
+.t-s { color: oklch(0.77 0.14 145); }
+.t-c { color: var(--text-primary); }
+.t-p { color: var(--text-inverse); }
+
+.or-divider {
+  display: flex; align-items: center; gap: 12px;
+  font-size: var(--xs); color: var(--text-inverse);
+  letter-spacing: 0.06em; margin: 20px 0;
+}
+.or-divider::before, .or-divider::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.pending-note {
+  display: flex; align-items: center; gap: var(--s4);
+  font-size: var(--xs); color: var(--text-inverse);
+  margin-top: var(--s8);
+}
+
+/* ── FOOTER ───────────────────────────────── */
+.footer { padding: 24px 0; }
+
+.footer-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+
+.footer-brand { font-size: var(--md); color: var(--text-inverse); }
+.footer-brand strong { color: var(--accent); font-weight: 600; }
+
+.footer-links { display: flex; gap: 16px; }
+
+.footer-links a {
+  font-size: var(--md); color: var(--text-inverse);
+  padding: var(--s1) var(--s2); border-radius: var(--r-xs);
+  transition: color var(--t-instant);
+}
+.footer-links a:hover { color: var(--text-secondary); }
+
+/* ── SCROLL REVEAL ────────────────────────── */
+.reveal {
+  opacity: 0; transform: translateY(10px);
+  transition: opacity var(--t-fast) ease, transform var(--t-fast) ease;
+}
+.reveal.in { opacity: 1; transform: none; }
+
+/* ── RESPONSIVE ───────────────────────────── */
+@media (max-width: 640px) {
+  :root { --d3: 36px; --d2: 28px; --d1: 22px; --gap: 16px; }
+  .hero { padding-top: calc(var(--nav-h) + 52px); padding-bottom: 56px; }
+  .nav-links li:not(:last-child) { display: none; }
+  .demo-grid { grid-template-columns: 1fr; }
+  .demo-without { display: none; }
+  .pillars-grid { grid-template-columns: 1fr; }
+  .section { padding: 48px 0; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<header>
+  <nav class="nav" aria-label="Main navigation">
+    <div class="nav-inner">
+      <a href="/" class="nav-logo" aria-label="critique home">critique</a>
+      <ul class="nav-links">
+        <li><a href="#demo">demo</a></li>
+        <li><a href="#skills">skills</a></li>
+        <li><a href="#install">install</a></li>
+        <li>
+          <a href="https://github.com/Alfafis/critique" class="nav-gh"
+             target="_blank" rel="noopener noreferrer"
+             aria-label="View source on GitHub (opens in new tab)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+            </svg>
+            GitHub
+          </a>
+        </li>
+      </ul>
+    </div>
+  </nav>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero" aria-labelledby="h-hero">
+    <div class="wrap">
+      <div class="hero-tag" aria-label="Claude Code Plugin">Claude Code Plugin</div>
+      <h1 id="h-hero">
+        if there's a problem,<br>say it's <em>serious.</em>
+      </h1>
+      <p class="hero-sub">
+        Permanent critical mindset injected into every Claude Code session.
+        Real bugs. Questionable decisions. Ordered by impact.
+      </p>
+      <div class="hero-actions">
+        <a href="#install" class="btn btn-primary">Install plugin</a>
+        <a href="https://github.com/Alfafis/critique" class="btn btn-ghost"
+           target="_blank" rel="noopener noreferrer">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          View source
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- BEFORE / AFTER -->
+  <section class="section" id="demo" aria-labelledby="h-demo">
+    <div class="wrap">
+      <p class="section-label" aria-hidden="true">§ before / after</p>
+      <h2 class="section-title" id="h-demo">Same code. Different lens.</h2>
+      <p class="section-sub">Without critique, problems get buried in reassurance.</p>
+      <div class="demo-grid reveal"
+           role="img"
+           aria-label="Without critique: vague praise. With critique: specific security and design findings.">
+        <div class="demo-panel demo-without">
+          <div class="demo-header" aria-hidden="true">
+            <div class="demo-dots"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <span class="demo-label">without critique</span>
+          </div>
+          <div class="demo-body">
+            "This looks good overall! A few minor things to consider — you might want to add some error handling, and the naming could perhaps be a bit clearer, but overall it's a solid implementation."
+          </div>
+        </div>
+        <div class="demo-panel">
+          <div class="demo-header" aria-hidden="true">
+            <div class="demo-dots"><span class="dot dot-r"></span><span class="dot dot-y"></span><span class="dot dot-g"></span></div>
+            <span class="demo-label">with critique</span>
+          </div>
+          <div class="demo-body">
+            <div class="finding">
+              <div class="finding-label label-red">🔴 SECURITY</div>
+              <p><code>userId</code> comes from request body without validation — attacker controls it. Read from session token instead.</p>
+            </div>
+            <div class="finding">
+              <div class="finding-label label-yellow">🟡 DESIGN</div>
+              <p><code>processOrder</code> does DB write + email in same function — partial failure leaves inconsistent state. Wrap in transaction or split.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PILLARS -->
+  <section class="section" id="pillars" aria-labelledby="h-pillars">
+    <div class="wrap">
+      <p class="section-label" aria-hidden="true">§ mindset</p>
+      <h2 class="section-title" id="h-pillars">Four rules, no exceptions</h2>
+      <p class="section-sub">Active on every response. Code, review, plan, architecture, decisions.</p>
+      <div class="pillars-grid reveal">
+        <div class="pillar">
+          <div class="pillar-num">01</div>
+          <h3>Real problems</h3>
+          <p>Bugs, security flaws, unexpected behaviors, unhandled edge cases. Only what actually breaks or causes damage.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-num">02</div>
+          <h3>Questionable decisions</h3>
+          <p>Architecture choices that will cause pain later — explained with why and a better alternative.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-num">03</div>
+          <h3>What's good</h3>
+          <p>Mentioned only if non-obvious and worth reinforcing. No praising the obvious.</p>
+        </div>
+        <div class="pillar">
+          <div class="pillar-num">04</div>
+          <h3>Priority</h3>
+          <p>Findings ordered by real impact, not ease of fix. Highest consequence-if-ignored first.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SKILLS -->
+  <section class="section" id="skills" aria-labelledby="h-skills">
+    <div class="wrap">
+      <p class="section-label" aria-hidden="true">§ skills</p>
+      <h2 class="section-title" id="h-skills">Two modes</h2>
+      <p class="section-sub">Namespaced under <code style="font-size:var(--3xl);color:var(--text-tertiary);">critique:</code></p>
+
+      <div class="skill-card reveal">
+        <div class="skill-header">
+          <span class="skill-cmd">/critique:critique</span>
+          <span class="skill-badge">PERSISTENT</span>
+        </div>
+        <p class="skill-desc">
+          Activates the critical mindset explicitly. A <code>SessionStart</code> hook injects it automatically — this is the manual trigger and confirmation. Once active, applies to all work until explicitly disabled.
+        </p>
+        <div class="tags" aria-label="Deactivation phrases">
+          <span class="tag">critique off</span>
+          <span class="tag">disable critique</span>
+          <span class="tag">stop critique</span>
+          <span class="tag">desativa critica</span>
+        </div>
+      </div>
+
+      <div class="skill-card reveal">
+        <div class="skill-header">
+          <span class="skill-cmd">/critique:rigorous</span>
+          <span class="skill-badge">DEEP ANALYSIS</span>
+        </div>
+        <p class="skill-desc">
+          Five-phase protocol before any implementation: pre-flight → security audit → implementation audit → structured output → STOP. Blocks ambiguous scope. Never assumes — always asks.
+        </p>
+        <div class="tags" aria-label="Available modes">
+          <span class="tag">/rigorous</span>
+          <span class="tag">/rigorous plan &lt;task&gt;</span>
+          <span class="tag">/rigorous sec</span>
+          <span class="tag">/rigorous impl</span>
+          <span class="tag">/rigorous code</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSTALL -->
+  <section class="section" id="install" aria-labelledby="h-install">
+    <div class="wrap">
+      <p class="section-label" aria-hidden="true">§ install</p>
+      <h2 class="section-title" id="h-install">Get started</h2>
+      <p class="section-sub">Two options. Both take under a minute.</p>
+
+      <div class="reveal">
+        <p class="opt-label">Option 1 — extraKnownMarketplaces</p>
+
+        <div class="code-block">
+          <div class="code-block-bar">
+            <span class="code-block-name">~/.claude/settings.json</span>
+            <button class="copy-btn" id="cp-json" aria-label="Copy settings JSON">copy</button>
+          </div>
+          <pre><span class="t-p">{</span>
+  <span class="t-k">"extraKnownMarketplaces"</span><span class="t-p">: {</span>
+    <span class="t-k">"critique"</span><span class="t-p">: {</span>
+      <span class="t-k">"source"</span><span class="t-p">: {</span>
+        <span class="t-k">"source"</span><span class="t-p">:</span> <span class="t-s">"github"</span><span class="t-p">,</span>
+        <span class="t-k">"repo"</span><span class="t-p">:</span>   <span class="t-s">"Alfafis/critique"</span>
+      <span class="t-p">}</span>
+    <span class="t-p">}</span>
+  <span class="t-p">}</span>
+<span class="t-p">}</span></pre>
+        </div>
+
+        <div class="code-block">
+          <div class="code-block-bar">
+            <span class="code-block-name">Claude Code</span>
+            <button class="copy-btn" id="cp-install" aria-label="Copy install command">copy</button>
+          </div>
+          <pre><span class="t-c">/plugin install critique@critique</span></pre>
+        </div>
+
+        <div class="or-divider" aria-hidden="true">or</div>
+
+        <p class="opt-label">Option 2 — community marketplace</p>
+
+        <div class="code-block">
+          <div class="code-block-bar">
+            <span class="code-block-name">Claude Code</span>
+            <button class="copy-btn" id="cp-community" aria-label="Copy community install command">copy</button>
+          </div>
+          <pre><span class="t-c">/plugin install critique@claude-community</span></pre>
+        </div>
+
+        <p class="pending-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+          Pending community marketplace review — available soon.
+        </p>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <p class="footer-brand"><strong>critique</strong> · MIT license</p>
+      <ul class="footer-links">
+        <li><a href="https://github.com/Alfafis/critique" target="_blank" rel="noopener noreferrer">GitHub</a></li>
+        <li><a href="https://github.com/Alfafis/critique/issues" target="_blank" rel="noopener noreferrer">Issues</a></li>
+      </ul>
+    </div>
+  </div>
+</footer>
+
+<script>
+const COPY_TEXTS = {
+  'cp-json': `{
+  "extraKnownMarketplaces": {
+    "critique": {
+      "source": {
+        "source": "github",
+        "repo": "Alfafis/critique"
+      }
+    }
+  }
+}`,
+  'cp-install':   '/plugin install critique@critique',
+  'cp-community': '/plugin install critique@claude-community'
+};
+
+document.querySelectorAll('.copy-btn').forEach(btn => {
+  const text = COPY_TEXTS[btn.id];
+  if (!text) return;
+
+  btn.addEventListener('click', () => {
+    navigator.clipboard.writeText(text)
+      .catch(() => {
+        const ta = Object.assign(document.createElement('textarea'), {
+          value: text, style: 'position:fixed;opacity:0'
+        });
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+      })
+      .finally(() => {
+        btn.textContent = 'copied';
+        btn.classList.add('copied');
+        setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+      });
+  });
+});
+
+// Scroll reveal
+const io = new IntersectionObserver(
+  entries => entries.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
+  }),
+  { threshold: 0.07, rootMargin: '0px 0px -32px 0px' }
+);
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+</script>
+</body>
+</html>
