@@ -571,16 +571,32 @@ body::before {
   <section class="section" id="skills" aria-labelledby="h-skills">
     <div class="wrap">
       <p class="section-label" aria-hidden="true">§ skills</p>
-      <h2 class="section-title" id="h-skills">Two modes</h2>
-      <p class="section-sub">Namespaced under <code style="font-size:var(--3xl);color:var(--text-tertiary);">critique:</code></p>
+      <h2 class="section-title" id="h-skills">Three levels</h2>
+      <p class="section-sub">Scan for blockers. Critique by default. Go rigorous when it matters.</p>
 
       <div class="skill-card reveal">
         <div class="skill-header">
-          <span class="skill-cmd">/critique:critique</span>
-          <span class="skill-badge">PERSISTENT</span>
+          <span class="skill-cmd">/scan</span>
+          <span class="skill-badge">LIGHT · ONE-SHOT</span>
         </div>
         <p class="skill-desc">
-          Activates the critical mindset explicitly. A <code>SessionStart</code> hook injects it automatically — this is the manual trigger and confirmation. Once active, applies to all work until explicitly disabled.
+          Quick blocker check on whatever you point at. Reports only what actually breaks: bugs that crash, security holes, silent failures. No style, no suggestions. If nothing critical — says so and stops.
+        </p>
+        <div class="tags" aria-label="Trigger phrases">
+          <span class="tag">scan this</span>
+          <span class="tag">tem algo errado aqui</span>
+          <span class="tag">check this</span>
+          <span class="tag">quick review</span>
+        </div>
+      </div>
+
+      <div class="skill-card reveal">
+        <div class="skill-header">
+          <span class="skill-cmd">/critique</span>
+          <span class="skill-badge">MEDIUM · DEFAULT</span>
+        </div>
+        <p class="skill-desc">
+          Active by default in every session via <code>SessionStart</code> hook. Context-aware: code → bugs + security + edge cases; spec/plan → assumptions + YAGNI; architecture → tradeoffs + coupling. Silent on trivial tasks — speaks up when it matters.
         </p>
         <div class="tags" aria-label="Deactivation phrases">
           <span class="tag">critique off</span>
@@ -592,11 +608,11 @@ body::before {
 
       <div class="skill-card reveal">
         <div class="skill-header">
-          <span class="skill-cmd">/critique:rigorous</span>
-          <span class="skill-badge">DEEP ANALYSIS</span>
+          <span class="skill-cmd">/rigorous</span>
+          <span class="skill-badge">HEAVY · ON-DEMAND</span>
         </div>
         <p class="skill-desc">
-          Five-phase protocol before any implementation: pre-flight → security audit → implementation audit → structured output → STOP. Blocks ambiguous scope. Never assumes — always asks.
+          Full forensic analysis. No mercy, no noise filter. For high-stakes decisions, complex code, and anything irreversible. Pre-flight, security audit, implementation audit — structured output before any action.
         </p>
         <div class="tags" aria-label="Available modes">
           <span class="tag">/rigorous</span>
