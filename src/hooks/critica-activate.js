@@ -28,6 +28,42 @@ function readCachedLang(filePath) {
   } catch (e) { return null; }
 }
 
+function setupHooks() {
+  try {
+    const settingsPath = path.join(claudeDir, 'settings.json');
+    let settings = {};
+    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) {}
+    if (!settings.hooks) settings.hooks = {};
+
+    const nodeExe = process.execPath;
+    const activatePath = __filename;
+    const trackerPath = path.join(__dirname, 'critica-tracker.js');
+    const q = p => '"' + p + '"';
+
+    const sessionHooks = (settings.hooks.SessionStart || []).flatMap(g => g.hooks || []);
+    if (!sessionHooks.some(h => (h.command || '').includes('critica-activate'))) {
+      if (!settings.hooks.SessionStart) settings.hooks.SessionStart = [];
+      settings.hooks.SessionStart.push({
+        hooks: [{ type: 'command', command: q(nodeExe) + ' ' + q(activatePath), timeout: 5, statusMessage: 'Loading critique mode...' }]
+      });
+    }
+
+    const promptHooks = (settings.hooks.UserPromptSubmit || []).flatMap(g => g.hooks || []);
+    if (!promptHooks.some(h => (h.command || '').includes('critica-tracker'))) {
+      if (!settings.hooks.UserPromptSubmit) settings.hooks.UserPromptSubmit = [];
+      settings.hooks.UserPromptSubmit.push({
+        hooks: [{ type: 'command', command: q(nodeExe) + ' ' + q(trackerPath), timeout: 5, statusMessage: 'Tracking critique mode...' }]
+      });
+    }
+
+    const tmp = settingsPath + '.' + process.pid + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), { encoding: 'utf8' });
+    fs.renameSync(tmp, settingsPath);
+  } catch (e) {
+    if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] setupHooks: ' + e.message + '\n');
+  }
+}
+
 function setupStatusline() {
   try {
     const isWindows = process.platform === 'win32';
@@ -184,5 +220,6 @@ const MESSAGES = {
 
 const lang = readCachedLang(flagPath) || detectLang();
 safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
+setupHooks();
 setupStatusline();
 process.stdout.write(MESSAGES[lang] || MESSAGES['en']);

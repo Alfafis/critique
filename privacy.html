@@ -130,7 +130,7 @@ footer {
 <main class="content">
   <p class="page-label">§ legal</p>
   <h1>Privacy Policy</h1>
-  <p class="updated">Last updated: May 19, 2026</p>
+  <p class="updated">Last updated: May 20, 2026</p>
 
   <div class="highlight">
     <strong style="color:var(--text-primary)">Short version:</strong> critique collects no data. It runs entirely on your local machine. Nothing is sent anywhere.
@@ -148,8 +148,13 @@ footer {
 
   <h2>Local files</h2>
   <p>
-    The plugin writes a temporary flag file (<code style="font-size:13px;background:oklch(0.16 0.01 60);padding:1px 5px;border-radius:3px;color:oklch(0.76 0.12 280)">.critique-active</code>) to your home directory to track session state. This file is read and written only by the plugin hooks running locally. It is never transmitted.
+    The plugin writes and reads the following files on your local machine. Nothing is ever transmitted.
   </p>
+  <ul style="margin:0 0 12px 20px;font-size:14.5px;color:var(--text-secondary);line-height:1.7">
+    <li><code style="font-size:13px;background:oklch(0.16 0.01 60);padding:1px 5px;border-radius:3px;color:oklch(0.76 0.12 280)">~/.claude/.critique-active</code> — session flag, tracks whether critique mode is active and in which language.</li>
+    <li><code style="font-size:13px;background:oklch(0.16 0.01 60);padding:1px 5px;border-radius:3px;color:oklch(0.76 0.12 280)">~/.claude/settings.json</code> — on first activation, the plugin adds its hook entries and statusline registration. Existing settings are preserved.</li>
+    <li><code style="font-size:13px;background:oklch(0.16 0.01 60);padding:1px 5px;border-radius:3px;color:oklch(0.76 0.12 280)">~/.claude/hooks/critica-statusline.*</code> — badge script copied once for statusline display.</li>
+  </ul>
 
   <h2>Third-party services</h2>
   <p>

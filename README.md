@@ -1,5 +1,8 @@
 # critique
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-d03b2f?logo=anthropic&logoColor=white)](https://claude.ai/code)
+
 Permanent critical mindset for Claude Code. Every response surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact. No sugarcoating.
 
 ---
@@ -81,18 +84,7 @@ Or: `/plugin` → Discover → search `critique`.
 
 ### Statusline badge
 
-Copy `src/hooks/critica-statusline.ps1` (Windows) or `src/hooks/critica-statusline.sh` (Mac/Linux) to your Claude config directory, then add to `~/.claude/settings.json`:
-
-```json
-{
-  "statusLine": {
-    "type": "command",
-    "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:/Users/YOU/.claude/critica-statusline.ps1\""
-  }
-}
-```
-
-Renders `[CRITIQUE]` in red when active.
+Automatic on first activation — the plugin copies the badge script to `~/.claude/hooks/` and registers it in `settings.json`. Renders `[CRITIQUE]` in red when active.
 
 ---
 
