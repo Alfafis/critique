@@ -6,9 +6,12 @@ try {
     $Item = Get-Item -LiteralPath $Flag -Force -ErrorAction Stop
     if ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { exit 0 }
     if ($Item.Length -gt 64) { exit 0 }
-} catch {
-    exit 0
-}
+    $Content = [System.IO.File]::ReadAllText($Flag).Trim()
+} catch { exit 0 }
+
+if ($Content -notmatch '^active:[a-z]{2}:(\d+)$') { exit 0 }
+$Age = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() - [long]$Matches[1]
+if ($Age -gt 86400) { exit 0 }
 
 $Esc = [char]27
 [Console]::Write("${Esc}[38;5;196m[CRITIQUE]${Esc}[0m")

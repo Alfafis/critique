@@ -8,6 +8,7 @@ const os = require('os');
 
 const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const flagPath = path.join(claudeDir, '.critique-active');
+const TTL = 86400; // seconds — badge auto-clears this long after last hook run
 
 function safeWriteFlag(filePath, content) {
   try {
@@ -17,6 +18,21 @@ function safeWriteFlag(filePath, content) {
     fs.writeFileSync(tmp, content, { encoding: 'utf8', mode: 0o600 });
     fs.renameSync(tmp, filePath);
   } catch (e) {}
+}
+
+function readFlag(filePath) {
+  try {
+    const stat = fs.lstatSync(filePath);
+    if (stat.isSymbolicLink() || stat.size > 64) return null;
+    return fs.readFileSync(filePath, 'utf8');
+  } catch (e) { return null; }
+}
+
+function refreshFlag(filePath) {
+  const content = readFlag(filePath);
+  const m = content && content.match(/^(active:[a-z]{2}):/);
+  const prefix = m ? m[1] : 'active:en';
+  safeWriteFlag(filePath, prefix + ':' + Math.floor(Date.now() / 1000));
 }
 
 let input = '';
@@ -29,7 +45,7 @@ process.stdin.on('end', () => {
     // Reactivation — EN + PT + ES + FR
     if (/\b(ativa|enable|turn on|reactivate|reativa|activa|réactive)\b.*\b(critique|critica)\b/i.test(prompt) ||
         /\b(critique|critica)\b.*\b(on|ativa|enable|activa|réactive)\b/i.test(prompt)) {
-      safeWriteFlag(flagPath, 'active');
+      refreshFlag(flagPath);
       return;
     }
 
@@ -40,14 +56,12 @@ process.stdin.on('end', () => {
       return;
     }
 
-    // Refuse symlinks and oversized files
-    let isActive = false;
-    try {
-      const stat = fs.lstatSync(flagPath);
-      if (!stat.isSymbolicLink() && stat.size <= 64) isActive = true;
-    } catch (e) {}
+    const content = readFlag(flagPath);
+    const m = content && content.match(/^active:[a-z]{2}:(\d+)/);
+    const isActive = m && (Math.floor(Date.now() / 1000) - parseInt(m[1])) <= TTL;
 
     if (isActive) {
+      refreshFlag(flagPath);
       process.stdout.write(JSON.stringify({
         hookSpecificOutput: {
           hookEventName: 'UserPromptSubmit',

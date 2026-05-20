@@ -183,6 +183,6 @@ const MESSAGES = {
 };
 
 const lang = readCachedLang(flagPath) || detectLang();
-safeWriteFlag(flagPath, 'active:' + lang);
+safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
 setupStatusline();
 process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
