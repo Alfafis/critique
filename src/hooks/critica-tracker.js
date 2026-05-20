@@ -52,7 +52,10 @@ process.stdin.on('end', () => {
         hookSpecificOutput: {
           hookEventName: 'UserPromptSubmit',
           additionalContext:
-            'CRITIQUE MODE ACTIVE. Surface real problems first. ' +
+            'CRITIQUE MODE ACTIVE (medium). Surface real problems first. ' +
+            'Speak on: code with logic/auth/state, architecture decisions, specs being elaborated. ' +
+            'Stay silent on: trivial tasks (typo/rename/<50 lines), mechanical execution of approved instructions, issues already raised. ' +
+            'Adapt focus: code→bugs+security+edge cases; spec/plan→assumptions+YAGNI; architecture→coupling+tradeoffs. ' +
             'Questionable decisions: explain why and what\'s better. ' +
             'Praise only the non-obvious. Order by impact. No sugarcoating.'
         }
