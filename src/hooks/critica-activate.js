@@ -7,6 +7,7 @@ const os = require('os');
 
 const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
 const flagPath = path.join(claudeDir, '.critique-active');
+const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..', '..');
 
 function safeWriteFlag(filePath, content) {
   try {
@@ -18,8 +19,14 @@ function safeWriteFlag(filePath, content) {
   } catch (e) {}
 }
 
-safeWriteFlag(flagPath, 'active');
-setupStatusline();
+function readCachedLang(filePath) {
+  try {
+    const stat = fs.lstatSync(filePath);
+    if (stat.isSymbolicLink() || stat.size > 64) return null;
+    const m = fs.readFileSync(filePath, 'utf8').match(/^active:([a-z]{2})/);
+    return m ? m[1] : null;
+  } catch (e) { return null; }
+}
 
 function setupStatusline() {
   try {
@@ -28,69 +35,81 @@ function setupStatusline() {
     try { fs.mkdirSync(hooksDir, { recursive: true }); } catch (e) {}
 
     const scriptName = isWindows ? 'critica-statusline.ps1' : 'critica-statusline.sh';
-    const scriptPath = path.join(hooksDir, scriptName);
+    const destPath = path.join(hooksDir, scriptName);
+    const srcPath = path.join(pluginRoot, 'src', 'hooks', scriptName);
 
-    if (isWindows) {
-      const ps1 = [
-        '$ClaudeDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { Join-Path $HOME ".claude" }',
-        '$Flag = Join-Path $ClaudeDir ".critique-active"',
-        'if (-not (Test-Path $Flag)) { exit 0 }',
-        'try {',
-        '    $Item = Get-Item -LiteralPath $Flag -Force -ErrorAction Stop',
-        '    if ($Item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) { exit 0 }',
-        '    if ($Item.Length -gt 64) { exit 0 }',
-        '} catch { exit 0 }',
-        '$Esc = [char]27',
-        '[Console]::Write("${Esc}[38;5;196m[CRITIQUE]${Esc}[0m")',
-      ].join('\r\n');
-      fs.writeFileSync(scriptPath, ps1, { encoding: 'utf8' });
-    } else {
-      const sh = [
-        '#!/usr/bin/env bash',
-        'CLAUDE_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"',
-        'FLAG="$CLAUDE_DIR/.critique-active"',
-        '[ -f "$FLAG" ] || exit 0',
-        '[ -L "$FLAG" ] && exit 0',
-        'SIZE=$(wc -c < "$FLAG" 2>/dev/null || echo 999)',
-        '[ "$SIZE" -le 64 ] || exit 0',
-        "printf '\\033[38;5;196m[CRITIQUE]\\033[0m'",
-      ].join('\n');
-      fs.writeFileSync(scriptPath, sh, { encoding: 'utf8', mode: 0o755 });
-    }
+    fs.copyFileSync(srcPath, destPath);
+    if (!isWindows) fs.chmodSync(destPath, 0o755);
 
-    // Set statusLine in settings.json only if not already configured
     const settingsPath = path.join(claudeDir, 'settings.json');
     let settings = {};
     try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch (e) {}
     if (!settings.statusLine) {
       const cmd = isWindows
-        ? 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + scriptPath.replace(/\\/g, '\\\\') + '"'
-        : 'bash "' + scriptPath + '"';
+        ? 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + destPath.replace(/\\/g, '\\\\') + '"'
+        : 'bash "' + destPath + '"';
       settings.statusLine = { type: 'command', command: cmd };
       const tmp = settingsPath + '.' + process.pid + '.tmp';
       fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), { encoding: 'utf8' });
       fs.renameSync(tmp, settingsPath);
+    } else {
+      injectIntoBadgeAggregator(settings.statusLine, destPath, isWindows);
     }
   } catch (e) {
     if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] statusline: ' + e.message + '\n');
   }
 }
 
+function injectIntoBadgeAggregator(statusLine, critiqueBadgePath, isWindows) {
+  try {
+    if (statusLine.type !== 'command') return;
+    const cmd = statusLine.command || '';
+    let targetScript = null;
+    if (isWindows) {
+      const m = cmd.match(/-File\s+"([^"]+\.ps1)"/i);
+      if (m) targetScript = m[1];
+    } else {
+      const m = cmd.match(/bash\s+"?([^\s"]+\.sh)"?/i);
+      if (m) targetScript = m[1];
+    }
+    if (!targetScript) return;
+    let content;
+    try { content = fs.readFileSync(targetScript, 'utf8'); } catch (e) { return; }
+    if (content.includes('critica-statusline')) return;
+    const callLine = isWindows
+      ? '\r\nif (Test-Path "' + critiqueBadgePath + '") { & "' + critiqueBadgePath + '" }'
+      : '\n[ -f "' + critiqueBadgePath + '" ] && bash "' + critiqueBadgePath + '"';
+    fs.appendFileSync(targetScript, callLine, { encoding: 'utf8' });
+  } catch (e) {
+    if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] inject: ' + e.message + '\n');
+  }
+}
+
 function detectLang() {
-  // Explicit override via env var (most reliable on Windows)
   const override = (process.env.CRITIQUE_LANG || '').toLowerCase();
   if (/^pt/.test(override)) return 'pt';
   if (/^es/.test(override)) return 'es';
   if (/^fr/.test(override)) return 'fr';
   if (/^en/.test(override)) return 'en';
 
-  // POSIX env vars (Linux/Mac — not set on Windows)
   const envLang = process.env.LANG || process.env.LC_ALL || process.env.LANGUAGE || '';
   if (/^pt/i.test(envLang)) return 'pt';
   if (/^es/i.test(envLang)) return 'es';
   if (/^fr/i.test(envLang)) return 'fr';
 
-  // System locale via Intl (unreliable on Windows — returns display language, not Claude lang)
+  if (process.platform === 'win32') {
+    try {
+      const { execSync } = require('child_process');
+      const culture = execSync(
+        'powershell -NoProfile -Command "(Get-Culture).Name"',
+        { encoding: 'utf8', timeout: 2000 }
+      ).trim();
+      if (/^pt/i.test(culture)) return 'pt';
+      if (/^es/i.test(culture)) return 'es';
+      if (/^fr/i.test(culture)) return 'fr';
+    } catch (e) {}
+  }
+
   try {
     const locale = Intl.DateTimeFormat().resolvedOptions().locale;
     if (/^pt/i.test(locale)) return 'pt';
@@ -163,4 +182,7 @@ const MESSAGES = {
     '"disable critique" / "stop critique".',
 };
 
-process.stdout.write(MESSAGES[detectLang()]);
+const lang = readCachedLang(flagPath) || detectLang();
+safeWriteFlag(flagPath, 'active:' + lang);
+setupStatusline();
+process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
