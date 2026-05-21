@@ -66,7 +66,13 @@ Supports focused modes: `/rigorous plan <task>` · `/rigorous sec` · `/rigorous
 
 Or: `/plugin` → Discover → search `critique`.
 
-### Via `extraKnownMarketplaces` (direct from GitHub)
+### Direct from GitHub (CLI)
+
+```shell
+claude plugin marketplace add Alfafis/critique && claude plugin install critique@critique
+```
+
+### Direct from GitHub (manual)
 
 Add to `~/.claude/settings.json`:
 
