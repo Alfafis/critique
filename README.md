@@ -2,8 +2,17 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-d03b2f?logo=anthropic&logoColor=white)](https://claude.ai/code)
+[![GitHub stars](https://img.shields.io/github/stars/Alfafis/critique?style=flat&color=yellow)](https://github.com/Alfafis/critique/stargazers)
+[![Last Commit](https://img.shields.io/github/last-commit/Alfafis/critique?style=flat)](https://github.com/Alfafis/critique/commits/main)
 
 Permanent critical mindset for Claude Code. Every response surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact. No sugarcoating.
+
+<p align="center">
+  <a href="#before--after">Before/After</a> •
+  <a href="#install">Install</a> •
+  <a href="#skills">Skills</a> •
+  <a href="#toggle">Toggle</a>
+</p>
 
 ---
 
@@ -49,7 +58,15 @@ Supports focused modes: `/rigorous plan <task>` · `/rigorous sec` · `/rigorous
 
 ## Install
 
-### Via `extraKnownMarketplaces` (recommended)
+### Claude Code community marketplace
+
+```
+/plugin install critique
+```
+
+Or: `/plugin` → Discover → search `critique`.
+
+### Via `extraKnownMarketplaces` (direct from GitHub)
 
 Add to `~/.claude/settings.json`:
 
@@ -71,16 +88,6 @@ Then install:
 ```shell
 /plugin install critique@critique
 ```
-
-Or: `/plugin` → Discover → search `critique`.
-
-### Claude Code community marketplace (pending review)
-
-```
-/plugin install critique@claude-community
-```
-
-> Not yet available — submission in progress.
 
 ### Statusline badge
 
