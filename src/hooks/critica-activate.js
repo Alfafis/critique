@@ -89,7 +89,13 @@ function setupStatusline() {
       fs.writeFileSync(tmp, JSON.stringify(settings, null, 2), { encoding: 'utf8' });
       fs.renameSync(tmp, settingsPath);
     } else {
-      injectIntoBadgeAggregator(settings.statusLine, destPath, isWindows);
+      const injected = injectIntoBadgeAggregator(settings.statusLine, destPath, isWindows);
+      if (!injected) {
+        process.stderr.write(
+          '[critique] statusline badge could not be injected — existing statusLine is not a shell script.\n' +
+          'To enable the [CRITIQUE] badge, set DEBUG_CRITIQUE=1 for details or manually add: ' + destPath + '\n'
+        );
+      }
     }
   } catch (e) {
     if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] statusline: ' + e.message + '\n');
@@ -98,7 +104,7 @@ function setupStatusline() {
 
 function injectIntoBadgeAggregator(statusLine, critiqueBadgePath, isWindows) {
   try {
-    if (statusLine.type !== 'command') return;
+    if (statusLine.type !== 'command') return false;
     const cmd = statusLine.command || '';
     let targetScript = null;
     if (isWindows) {
@@ -108,16 +114,18 @@ function injectIntoBadgeAggregator(statusLine, critiqueBadgePath, isWindows) {
       const m = cmd.match(/bash\s+"?([^\s"]+\.sh)"?/i);
       if (m) targetScript = m[1];
     }
-    if (!targetScript) return;
+    if (!targetScript) return false;
     let content;
-    try { content = fs.readFileSync(targetScript, 'utf8'); } catch (e) { return; }
-    if (content.includes('critica-statusline')) return;
+    try { content = fs.readFileSync(targetScript, 'utf8'); } catch (e) { return false; }
+    if (content.includes('critica-statusline')) return true;
     const callLine = isWindows
       ? '\r\nif (Test-Path "' + critiqueBadgePath + '") { & "' + critiqueBadgePath + '" }'
       : '\n[ -f "' + critiqueBadgePath + '" ] && bash "' + critiqueBadgePath + '"';
     fs.appendFileSync(targetScript, callLine, { encoding: 'utf8' });
+    return true;
   } catch (e) {
     if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] inject: ' + e.message + '\n');
+    return false;
   }
 }
 
