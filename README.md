@@ -68,6 +68,8 @@ Or: `/plugin` → Discover → search `critique`.
 
 ### Direct from GitHub (CLI)
 
+Run in your terminal (outside Claude Code), or use `!` prefix inside Claude Code:
+
 ```shell
 claude plugin marketplace add Alfafis/critique && claude plugin install critique@critique
 ```
