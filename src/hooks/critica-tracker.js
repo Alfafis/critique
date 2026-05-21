@@ -42,6 +42,21 @@ process.stdin.on('end', () => {
     const data = JSON.parse(input);
     const prompt = (data.prompt || '').trim();
 
+    // First-run detection: flag absent means SessionStart was missed (mid-session install)
+    const flagMissing = (() => { try { fs.lstatSync(flagPath); return false; } catch (e) { return true; } })();
+    if (flagMissing) {
+      try {
+        const { spawn } = require('child_process');
+        spawn(process.execPath, [path.join(__dirname, 'critica-activate.js')], {
+          detached: true,
+          stdio: 'ignore',
+          env: process.env
+        }).unref();
+      } catch (e) {}
+      // Write flag now so critique injects this turn; activate.js will overwrite with correct locale
+      safeWriteFlag(flagPath, 'active:en:' + Math.floor(Date.now() / 1000));
+    }
+
     // Reactivation — EN + PT + ES + FR
     if (/\b(ativa|enable|turn on|reactivate|reativa|activa|réactive)\b.*\b(critique|critica)\b/i.test(prompt) ||
         /\b(critique|critica)\b.*\b(on|ativa|enable|activa|réactive)\b/i.test(prompt)) {

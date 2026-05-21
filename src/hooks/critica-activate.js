@@ -19,15 +19,6 @@ function safeWriteFlag(filePath, content) {
   } catch (e) {}
 }
 
-function readCachedLang(filePath) {
-  try {
-    const stat = fs.lstatSync(filePath);
-    if (stat.isSymbolicLink() || stat.size > 64) return null;
-    const m = fs.readFileSync(filePath, 'utf8').match(/^active:([a-z]{2})/);
-    return m ? m[1] : null;
-  } catch (e) { return null; }
-}
-
 function setupHooks() {
   try {
     const settingsPath = path.join(claudeDir, 'settings.json');
@@ -226,7 +217,7 @@ const MESSAGES = {
     '"disable critique" / "stop critique".',
 };
 
-const lang = readCachedLang(flagPath) || detectLang();
+const lang = detectLang();
 safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
 setupHooks();
 setupStatusline();
