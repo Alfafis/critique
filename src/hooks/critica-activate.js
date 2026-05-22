@@ -217,8 +217,12 @@ const MESSAGES = {
     '"disable critique" / "stop critique".',
 };
 
-const lang = detectLang();
-safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
-setupHooks();
-setupStatusline();
-process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
+if (require.main === module) {
+  const lang = detectLang();
+  safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
+  setupHooks();
+  setupStatusline();
+  process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
+}
+
+module.exports = { safeWriteFlag, setupHooks, setupStatusline, injectIntoBadgeAggregator, detectLang, MESSAGES };

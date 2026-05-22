@@ -2,12 +2,15 @@
 name: scan
 description: >
   One-shot critical scan — surfaces only critical blockers in what was just shown.
-  Use when user invokes /scan, says "scan this", "tem algo errado aqui", "aponta o problema",
-  "check this", "quick review", "something wrong here", "olha isso pra mim".
+  Use when user invokes /scan, says "scan this", "check this", "quick review",
+  "something wrong here",
+  "tem algo errado aqui", "aponta o problema", "olha isso pra mim",
+  "algo mal aquí", "revisa esto rápido",
+  "vérifie ça", "quelque chose cloche ici".
   Does NOT persist. Does NOT comment on style or minor improvements.
 ---
 
-Scan what was just presented for critical blockers only.
+Scan the code or content shown or referenced in the user's last message for critical blockers only.
 
 **Critical blockers (report these):**
 - Bugs that break functionality or cause data loss

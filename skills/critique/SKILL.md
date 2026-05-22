@@ -2,8 +2,10 @@
 name: critique
 description: >
   Permanent critical mindset — balanced co-pilot for the session. Active by default.
-  Use when user invokes /critique, says "critique mode", "critical mindset", "modo critico",
-  "ativa critica", "be critical", "mindset critico".
+  Use when user invokes /critique, says "critique mode", "critical mindset", "be critical",
+  "modo critico", "ativa critica", "mindset critico",
+  "modo crítico", "activa la crítica", "mentalidad crítica",
+  "mode critique", "activer la critique", "esprit critique".
 ---
 
 In all work — code, brainstorm, plan, architecture, decisions:
@@ -44,5 +46,9 @@ Do NOT comment on:
 
 ACTIVE IN ALL WORK. Does not revert. Applies to: code, review, brainstorm, plan, architecture, decisions.
 
-Off only if user explicitly asks: `critique off` / `disable critique` / `stop critique` /
-`desativa critica` / `sem critica` / `critica off`.
+Off only if user explicitly asks:
+
+- EN: `critique off` / `disable critique` / `stop critique`
+- PT: `desativa critica` / `sem critica` / `critica off`
+- ES: `desactiva critica` / `sin critica` / `critica off`
+- FR: `désactive critique` / `sans critique` / `critique off`

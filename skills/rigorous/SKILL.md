@@ -1,10 +1,13 @@
 ---
 name: rigorous
 description: >
-  Deep analysis mode — critical thinking before coding, reviewing, or planning.
+  Deep analysis mode — critical thinking before and during coding, reviewing, or planning.
   Surfaces real bugs, security issues, questionable decisions, and incomplete implementations.
   Use when invoked as /rigorous, "rigorous mode", "analyze this rigorously", "audit this",
-  "be rigorous", "análise rigorosa", "modo rigoroso".
+  "be rigorous",
+  "análise rigorosa", "modo rigoroso", "audita isso",
+  "análisis riguroso", "modo riguroso", "audita esto",
+  "analyse rigoureuse", "mode rigoureux", "audite ça".
   Args: plan <task> | impl | sec | code
 ---
 
@@ -12,15 +15,15 @@ description: >
 
 Check invocation args and execute accordingly:
 
-- **No args (default):** all phases — FASE 0 → 1 → 2 → 3
-- **`plan <task>`:** FASE 0 + scope/dependency/risk analysis only → FASE 3
-- **`impl`:** FASE 0 + FASE 2 only (add FASE 1 if impl touches auth/input/queries) → FASE 3
-- **`sec`:** FASE 0 + FASE 1 only → FASE 3 (security findings only)
-- **`code`:** FASE 0 + FASE 2 quality section only → FASE 3
+- **No args (default):** all phases — PHASE 0 → 1 → 2 → 3
+- **`plan <task>`:** PHASE 0 + scope/dependency/risk analysis only → PHASE 3
+- **`impl`:** PHASE 0 + PHASE 1 + PHASE 2 → PHASE 3
+- **`sec`:** PHASE 0 + PHASE 1 only → PHASE 3 (security findings only)
+- **`code`:** PHASE 0 + PHASE 2 quality section only → PHASE 3
 
 ---
 
-## FASE 0 — Pre-flight (always required)
+## PHASE 0 — Pre-flight (always required)
 
 Before writing any code or proposing any solution, answer internally:
 
@@ -30,11 +33,11 @@ Before writing any code or proposing any solution, answer internally:
 4. **Regression risk:** Which existing functionality could break silently?
 5. **Reversibility:** If it goes wrong, how do you undo it?
 
-If any answer is "I don't know" — stop and ask before continuing.
+Stop and ask the user only if answers 1–4 are unknown **and** that ambiguity would materially change the approach. For answer 5 (reversibility): if no undo path exists, flag it in PHASE 3 but do not stop.
 
 ---
 
-## FASE 1 — Security Audit
+## PHASE 1 — Security Audit
 
 Run for any change touching an endpoint, user input, database query, external fetch, or sensitive data.
 
@@ -66,14 +69,14 @@ Run for any change touching an endpoint, user input, database query, external fe
 
 | Severity | Criterion | Action |
 |---|---|---|
-| CRITICAL | RCE, privilege escalation, data leak, auth bypass | Block implementation immediately |
+| CRITICAL | RCE, privilege escalation, data leak, auth bypass | Block — do not ship |
 | HIGH | Indirect exposure, IDOR, missing rate limit on sensitive route | Fix in current cycle |
 | MEDIUM | Missing defense-in-depth, absent security headers | Log in high-priority backlog |
 | LOW | Cosmetic hardening | Log in low-priority backlog |
 
 ---
 
-## FASE 2 — Implementation Audit
+## PHASE 2 — Implementation Audit
 
 ### Correctness
 
@@ -101,7 +104,7 @@ Run for any change touching an endpoint, user input, database query, external fe
 
 ---
 
-## FASE 3 — Structured output
+## PHASE 3 — Structured output
 
 ### 1. Critical problems (block merge)
 Bugs, security failures, incorrect behaviors, incomplete implementations. Cite `file:line`. Propose concrete fix.
@@ -131,6 +134,13 @@ Stop and ask the user if:
 - Task depends on something that doesn't exist yet (service, table, type)
 
 Never resolve scope ambiguity by assuming. Ask.
+
+---
+
+## When critique is also active
+
+If the session has critique mode on, /rigorous takes full precedence for this response.
+Apply PHASE 0–3 output only. Do not layer critique's turn-by-turn commentary on top.
 
 ---
 

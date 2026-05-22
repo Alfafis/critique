@@ -1,1 +1,6 @@
-{"type": "commonjs"}
+{
+  "type": "commonjs",
+  "scripts": {
+    "test": "node --test __tests__/activate.test.js __tests__/tracker.test.js"
+  }
+}
