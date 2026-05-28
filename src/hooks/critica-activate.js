@@ -106,6 +106,7 @@ function injectIntoBadgeAggregator(statusLine, critiqueBadgePath, isWindows) {
       if (m) targetScript = m[1];
     }
     if (!targetScript) return false;
+    if (path.resolve(targetScript) === path.resolve(critiqueBadgePath)) return true;
     let content;
     try { content = fs.readFileSync(targetScript, 'utf8'); } catch (e) { return false; }
     if (content.includes('critica-statusline')) return true;

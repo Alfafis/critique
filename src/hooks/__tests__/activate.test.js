@@ -199,6 +199,19 @@ describe('injectIntoBadgeAggregator', () => {
     assert.equal(result, false);
   });
 
+  test('returns true without modifying when targetScript IS the badge script', () => {
+    const badgePath = path.join(tmpDir, 'critica-statusline.sh');
+    fs.writeFileSync(badgePath, '#!/bin/bash\necho hi\n');
+    const contentBefore = fs.readFileSync(badgePath, 'utf8');
+    const result = mod.injectIntoBadgeAggregator(
+      { type: 'command', command: 'bash "' + badgePath + '"' },
+      badgePath,
+      false
+    );
+    assert.equal(result, true);
+    assert.equal(fs.readFileSync(badgePath, 'utf8'), contentBefore);
+  });
+
   test('idempotent — already injected script not modified again', () => {
     const scriptPath = path.join(tmpDir, 'statusline.sh');
     const badgePath = path.join(tmpDir, 'critica-statusline.sh');
