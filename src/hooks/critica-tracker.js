@@ -42,7 +42,14 @@ const ADDITIONAL_CONTEXT =
 // dead end. See the comment there.
 function safeWriteFlag(filePath, content) {
   try {
-    try { if (fs.lstatSync(path.dirname(filePath)).isSymbolicLink()) return; } catch (e) {}
+    // The config directory may not exist yet — CLAUDE_CONFIG_DIR can point anywhere, and a
+    // first run can land before Claude Code has created it. Without this, writeFileSync threw
+    // ENOENT into the empty catch below and the flag was never written: the session start
+    // produced its banner but persisted nothing, so the badge stayed dark and the detected
+    // language was lost. Present since 1.3.1.
+    const dir = path.dirname(filePath);
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+    try { if (fs.lstatSync(dir).isSymbolicLink()) return; } catch (e) {}
     try { if (fs.lstatSync(filePath).isSymbolicLink()) fs.unlinkSync(filePath); } catch (e) {}
     const tmp = filePath + '.' + process.pid + '.tmp';
     fs.writeFileSync(tmp, content, { encoding: 'utf8', mode: 0o600 });

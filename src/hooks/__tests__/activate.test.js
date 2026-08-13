@@ -76,6 +76,31 @@ describe('safeWriteFlag', () => {
     assert.equal(fs.readFileSync(real, 'utf8'), 'original', 'target must be untouched');
   });
 
+  // CI caught this on all three runners: CLAUDE_CONFIG_DIR pointed at a directory that did
+  // not exist, writeFileSync threw ENOENT into the empty catch, and the flag was never
+  // written. The banner still printed, so the failure was invisible.
+  test('creates the config directory when it does not exist', () => {
+    const fresh = path.join(tmpDir, 'not-created-yet');
+    const flag = path.join(fresh, '.critique-active');
+    mod.safeWriteFlag(flag, 'active:pt:123');
+    assert.equal(fs.readFileSync(flag, 'utf8'), 'active:pt:123');
+  });
+
+  test('creates nested config directories', () => {
+    const flag = path.join(tmpDir, 'a', 'b', 'c', '.critique-active');
+    mod.safeWriteFlag(flag, 'active:en:1');
+    assert.equal(fs.existsSync(flag), true);
+  });
+
+  test('the first activation persists the flag, not only the second', () => {
+    const fresh = path.join(tmpDir, 'first-run');
+    const flag = path.join(fresh, '.critique-active');
+    mod.safeWriteFlag(flag, 'active:fr:' + Math.floor(Date.now() / 1000));
+    const tracker = freshRequire(TRACKER_PATH);
+    assert.notEqual(tracker.handlePrompt('review this', flag), null);
+    assert.equal(tracker.parseFlag(flag).lang, 'fr', 'detected language must survive the first run');
+  });
+
   test('refuses when the containing directory is a symlink (unix only)', () => {
     if (process.platform === 'win32') return;
     const realDir = path.join(tmpDir, 'realdir');
