@@ -150,6 +150,11 @@ Off persists for the rest of the session and keeps your detected language. A new
 
 ---
 
+## Contributing
+
+Tests, signing setup and the release process: [CONTRIBUTING.md](CONTRIBUTING.md).
+Reporting a vulnerability: [SECURITY.md](SECURITY.md).
+
 ## License
 
 MIT
