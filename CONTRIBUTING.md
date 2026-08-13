@@ -16,6 +16,22 @@ installer writes `settings.json`:
 CLAUDE_CONFIG_DIR=$(mktemp -d) CLAUDE_PLUGIN_ROOT=$PWD node src/hooks/critica-activate.js
 ```
 
+### Testing the prompt hook on Windows
+
+PowerShell 5.1 prepends a UTF-8 BOM when it pipes a string into a process, and
+`Set-Content -Encoding utf8` writes one too. `critica-tracker.js` strips a leading BOM, so the
+pipe below works — but if you hand-write a `settings.json` for a test, write it without a BOM or
+the plugin will refuse to parse it:
+
+```powershell
+'{"prompt":"review this"}' | node src\hooks\critica-tracker.js
+
+# writing a test settings.json — note the $false, which means "no BOM"
+[System.IO.File]::WriteAllText($path, $json, (New-Object System.Text.UTF8Encoding $false))
+```
+
+PowerShell 7 (`pwsh`) defaults to BOM-less UTF-8 and does not have this problem.
+
 ## Branches and pull requests
 
 `main` is protected. Direct pushes are rejected — work on a branch and open a pull request.

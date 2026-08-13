@@ -50,10 +50,15 @@ describe('documentation keeps up with the code', () => {
     assert.ok(read('SECURITY.md').includes('security/advisories'));
   });
 
-  test('every CHANGELOG release link points at a tag that exists', () => {
+  // The version being released is exempt: the release checklist tags after the merge, because
+  // squash merging discards the branch commit. Between the CHANGELOG commit and the tag there
+  // is legitimately one link with no tag behind it — the current version, and only that one.
+  test('every CHANGELOG release link points at a tag that exists, except the one being released', () => {
     const { execSync } = require('child_process');
     const tags = new Set(execSync('git tag', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean));
+    const pending = 'critique--v' + JSON.parse(read('.claude-plugin/plugin.json')).version;
     for (const m of read('CHANGELOG.md').matchAll(/releases\/tag\/(\S+)/g)) {
+      if (m[1] === pending) continue;
       assert.ok(tags.has(m[1]), 'CHANGELOG links to missing tag ' + m[1]);
     }
   });

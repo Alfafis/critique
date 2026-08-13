@@ -95,6 +95,16 @@ function spawnActivate() {
   } catch (e) {}
 }
 
+// Claude Code writes the hook payload straight to this process's stdin and never emits a BOM,
+// but a PowerShell 5.1 pipe does — and JSON.parse then throws into the caller's catch, so
+// critique stops injecting with no signal anywhere. The manual commands in CONTRIBUTING run
+// through exactly such a pipe. U+FEFF is written as an escape on purpose: as a literal it is
+// invisible in an editor and one careless reformat silently removes the guard.
+function readPrompt(raw) {
+  const data = JSON.parse(String(raw).replace(/^\uFEFF/, ''));
+  return (data.prompt || '').trim();
+}
+
 function injection() {
   return JSON.stringify({
     hookSpecificOutput: {
@@ -143,8 +153,7 @@ if (require.main === module) {
   process.stdin.on('data', chunk => { input += chunk; });
   process.stdin.on('end', () => {
     try {
-      const data = JSON.parse(input);
-      const prompt = (data.prompt || '').trim();
+      const prompt = readPrompt(input);
       const out = handlePrompt(prompt);
       if (out) process.stdout.write(out);
     } catch (e) {
@@ -153,4 +162,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { safeWriteFlag, readFlag, parseFlag, refreshFlag, handlePrompt, OFF_RE, ON_RE, TTL };
+module.exports = { safeWriteFlag, readFlag, parseFlag, refreshFlag, readPrompt, handlePrompt, OFF_RE, ON_RE, TTL };

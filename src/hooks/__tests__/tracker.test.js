@@ -69,6 +69,38 @@ describe('readFlag', () => {
   });
 });
 
+describe('readPrompt', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  test('reads a plain payload', () => {
+    assert.equal(mod.readPrompt('{"prompt":"review this"}'), 'review this');
+  });
+
+  // A PowerShell 5.1 pipe prepends a UTF-8 BOM. Without stripping it, JSON.parse throws into
+  // the entrypoint's catch and critique silently stops injecting — found while validating on
+  // Windows 11 / Node 22.
+  test('tolerates a UTF-8 BOM', () => {
+    assert.equal(mod.readPrompt('﻿{"prompt":"review this"}'), 'review this');
+  });
+
+  test('strips only one leading BOM, not content', () => {
+    assert.equal(mod.readPrompt('﻿{"prompt":"a﻿b"}'), 'a﻿b');
+  });
+
+  test('trims surrounding whitespace', () => {
+    assert.equal(mod.readPrompt('{"prompt":"  spaced  "}'), 'spaced');
+  });
+
+  test('returns empty string when prompt is absent', () => {
+    assert.equal(mod.readPrompt('{}'), '');
+  });
+
+  test('still throws on genuinely malformed JSON', () => {
+    assert.throws(() => mod.readPrompt('{"prompt":'), SyntaxError);
+  });
+});
+
 describe('parseFlag', () => {
   beforeEach(setup);
   afterEach(teardown);
