@@ -8,6 +8,27 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries for 1.3.1 and earlier were reconstructed from commit history, so they are less detailed
 than the ones written as the work happened.
 
+## [1.5.2] — 2026-08-13
+
+### Fixed
+
+- **A UTF-8 BOM on stdin stopped the plugin silently.** `JSON.parse` threw into the entrypoint's
+  `catch`, the hook exited 0, and critique simply stopped injecting with no signal anywhere.
+  Claude Code writes the payload directly and never emits a BOM, but a PowerShell 5.1 pipe does
+  — which is how the documented manual test commands are run. A leading BOM is now stripped.
+
+### Added
+
+- CONTRIBUTING documents the PowerShell 5.1 BOM behaviour, including writing a test
+  `settings.json` without one.
+
+### Verified
+
+- Full manual validation on Windows 11 (10.0.26200) with Node 22: unit suite, activation into a
+  non-existent config directory, the toggle, badge install and render through `cmd.exe`, and
+  splicing into a CRLF aggregator ending in `exit 0` with a byte-identical restore on `off`.
+  The `(Get-Culture)` branch of language detection ran for the first time and returned `pt`.
+
 ## [1.5.1] — 2026-08-13
 
 ### Fixed
@@ -150,6 +171,7 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
+[1.5.2]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.2
 [1.5.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.1
 [1.5.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.0
 [1.4.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.4.0
