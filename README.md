@@ -41,6 +41,16 @@ Injects a permanent critical mindset into every session via a `SessionStart` hoo
 
 Applies to: code, review, brainstorm, plan, architecture, decisions.
 
+### What it costs
+
+The hook adds about **125 tokens to every prompt**, for as long as the mode is on. That is the
+mechanism — the instructions have to be in the model's attention on each turn, or the behavior
+decays after a few messages. It is a standing cost, not a one-off.
+
+Turn it off with `critique off` when you don't want it; the hook then writes nothing and injects
+nothing until you turn it back on. Nothing is read from your prompts beyond the on/off phrases,
+nothing is stored, and the plugin makes no network requests. See [SECURITY.md](SECURITY.md).
+
 ---
 
 ## Skills

@@ -39,6 +39,24 @@ describe('manifests', () => {
   });
 });
 
+describe('documentation keeps up with the code', () => {
+  test('the current version has a CHANGELOG entry', () => {
+    const v = JSON.parse(read('.claude-plugin/plugin.json')).version;
+    assert.ok(read('CHANGELOG.md').includes('## [' + v + ']'),
+      'CHANGELOG.md has no entry for ' + v + ' — bump and entry must land together');
+  });
+
+  test('a security disclosure channel is documented', () => {
+    assert.ok(read('SECURITY.md').includes('security/advisories'));
+  });
+
+  test('README links to files that exist', () => {
+    for (const m of read('README.md').matchAll(/\]\((?!https?:)([A-Za-z0-9_./-]+\.md)\)/g)) {
+      assert.equal(exists(m[1]), true, 'README links to missing ' + m[1]);
+    }
+  });
+});
+
 describe('hook registration', () => {
   // Up to 1.3.1 the hooks were declared in hooks.json AND copied into
   // ~/.claude/settings.json by setupHooks(). Both fired: the banner and the per-turn
