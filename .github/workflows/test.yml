@@ -1,0 +1,185 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unit:
+    name: unit (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run test suite
+        working-directory: src/hooks
+        run: npm test
+
+  smoke-unix:
+    name: smoke (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # Exercises the real hook entrypoints end to end: activation writes the flag and
+      # registers the badge, the badge renders, deactivation silences both, and the
+      # badge disappears. The unit suite calls the exported functions; this runs the
+      # scripts the way Claude Code does.
+      - name: SessionStart writes the flag and registers the statusline
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          export CLAUDE_PLUGIN_ROOT="$PWD"
+          node src/hooks/critica-activate.js > /dev/null
+          grep -qE '^active:[a-z]{2}:[0-9]+$' "$CLAUDE_CONFIG_DIR/.critique-active"
+          test -x "$CLAUDE_CONFIG_DIR/hooks/critica-statusline.sh"
+          node -e "process.exit(require('$CLAUDE_CONFIG_DIR/settings.json').statusLine ? 0 : 1)"
+
+      - name: Badge renders while active
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          bash "$CLAUDE_CONFIG_DIR/hooks/critica-statusline.sh" | grep -q 'CRITIQUE'
+
+      - name: UserPromptSubmit injects context
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          echo '{"prompt":"review this code"}' | node src/hooks/critica-tracker.js \
+            | grep -q 'CRITIQUE MODE ACTIVE'
+
+      - name: Deactivation persists and clears the badge
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          echo '{"prompt":"critique off"}' | node src/hooks/critica-tracker.js
+          grep -qE '^off:' "$CLAUDE_CONFIG_DIR/.critique-active"
+          out=$(echo '{"prompt":"and now review this"}' | node src/hooks/critica-tracker.js)
+          test -z "$out" || { echo "off did not persist: $out"; exit 1; }
+          badge=$(bash "$CLAUDE_CONFIG_DIR/hooks/critica-statusline.sh")
+          test -z "$badge" || { echo "badge still rendering while off: $badge"; exit 1; }
+
+      - name: Reactivation restores injection
+        shell: bash
+        run: |
+          set -euo pipefail
+          export CLAUDE_CONFIG_DIR="$RUNNER_TEMP/claude"
+          echo '{"prompt":"critique on"}' | node src/hooks/critica-tracker.js
+          echo '{"prompt":"review this code"}' | node src/hooks/critica-tracker.js \
+            | grep -q 'CRITIQUE MODE ACTIVE'
+
+  smoke-windows:
+    name: smoke (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # The Windows branch of setupStatusline and the PowerShell badge renderer cannot
+      # be exercised on any other runner. Everything below is Windows-only coverage.
+      - name: SessionStart writes the flag and registers the PowerShell statusline
+        shell: pwsh
+        run: |
+          $env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP 'claude'
+          $env:CLAUDE_PLUGIN_ROOT = $PWD.Path
+          node src/hooks/critica-activate.js | Out-Null
+          $flag = Join-Path $env:CLAUDE_CONFIG_DIR '.critique-active'
+          if ((Get-Content -Raw $flag).Trim() -notmatch '^active:[a-z]{2}:\d+$') { throw 'bad flag' }
+          $badge = Join-Path $env:CLAUDE_CONFIG_DIR 'hooks\critica-statusline.ps1'
+          if (-not (Test-Path $badge)) { throw 'badge script not copied' }
+          $settings = Get-Content -Raw (Join-Path $env:CLAUDE_CONFIG_DIR 'settings.json') | ConvertFrom-Json
+          if (-not $settings.statusLine) { throw 'statusLine not registered' }
+          # The stored command must contain the real path, not a pre-escaped one.
+          if ($settings.statusLine.command -notlike "*$badge*") {
+            throw "path mangled in statusLine: $($settings.statusLine.command)"
+          }
+
+      - name: Registered statusLine command actually runs and renders the badge
+        shell: pwsh
+        run: |
+          $env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP 'claude'
+          $settings = Get-Content -Raw (Join-Path $env:CLAUDE_CONFIG_DIR 'settings.json') | ConvertFrom-Json
+          $out = & cmd /c $settings.statusLine.command
+          if ("$out" -notmatch 'CRITIQUE') { throw "badge did not render: $out" }
+
+      - name: Deactivation persists and clears the PowerShell badge
+        shell: pwsh
+        run: |
+          $env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP 'claude'
+          '{"prompt":"critique off"}' | node src/hooks/critica-tracker.js | Out-Null
+          $flag = Join-Path $env:CLAUDE_CONFIG_DIR '.critique-active'
+          if ((Get-Content -Raw $flag).Trim() -notmatch '^off:') { throw 'off not written' }
+          $out = '{"prompt":"and now review this"}' | node src/hooks/critica-tracker.js
+          if ($out) { throw "off did not persist: $out" }
+          $badge = & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $env:CLAUDE_CONFIG_DIR 'hooks\critica-statusline.ps1')
+          if ($badge) { throw "badge still rendering while off: $badge" }
+
+      - name: Badge splices into an existing CRLF aggregator before its exit
+        shell: pwsh
+        run: |
+          $env:CLAUDE_CONFIG_DIR = Join-Path $env:RUNNER_TEMP 'claude2'
+          $env:CLAUDE_PLUGIN_ROOT = $PWD.Path
+          New-Item -ItemType Directory -Force -Path $env:CLAUDE_CONFIG_DIR | Out-Null
+          $agg = Join-Path $env:CLAUDE_CONFIG_DIR 'aggregator.ps1'
+          Set-Content -Path $agg -Value "Write-Host -NoNewline '[OTHER]'`r`nexit 0" -NoNewline
+          $settings = @{ statusLine = @{ type = 'command'; command = "powershell -NoProfile -ExecutionPolicy Bypass -File `"$agg`"" } }
+          $settings | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $env:CLAUDE_CONFIG_DIR 'settings.json')
+          node src/hooks/critica-activate.js | Out-Null
+          $out = & powershell -NoProfile -ExecutionPolicy Bypass -File $agg
+          if ("$out" -notmatch '\[OTHER\]') { throw "aggregator output lost: $out" }
+          if ("$out" -notmatch 'CRITIQUE') { throw "badge unreachable after exit 0: $out" }
+
+  validate:
+    name: plugin manifest
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Manifest version is the only one
+        run: |
+          set -euo pipefail
+          test ! -f plugin.json      || { echo "root plugin.json is back — version now lives in two files"; exit 1; }
+          test ! -f marketplace.json || { echo "root marketplace.json is back"; exit 1; }
+          node -e "
+            const v = require('./.claude-plugin/plugin.json').version;
+            if (!/^\d+\.\d+\.\d+$/.test(v)) { console.error('bad version: ' + v); process.exit(1); }
+            console.log('version ' + v);
+          "
+      - name: Hooks are registered exactly once
+        run: |
+          set -euo pipefail
+          node -e "
+            const h = require('./hooks/hooks.json').hooks;
+            for (const ev of ['SessionStart', 'UserPromptSubmit']) {
+              const n = (h[ev] || []).flatMap(g => g.hooks || []).length;
+              if (n !== 1) { console.error(ev + ' has ' + n + ' hooks, expected 1'); process.exit(1); }
+            }
+            const src = require('fs').readFileSync('src/hooks/critica-activate.js', 'utf8');
+            if (/function setupHooks/.test(src)) {
+              console.error('setupHooks is back — it double-registers against hooks/hooks.json');
+              process.exit(1);
+            }
+          "
