@@ -50,6 +50,14 @@ describe('documentation keeps up with the code', () => {
     assert.ok(read('SECURITY.md').includes('security/advisories'));
   });
 
+  test('every CHANGELOG release link points at a tag that exists', () => {
+    const { execSync } = require('child_process');
+    const tags = new Set(execSync('git tag', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean));
+    for (const m of read('CHANGELOG.md').matchAll(/releases\/tag\/(\S+)/g)) {
+      assert.ok(tags.has(m[1]), 'CHANGELOG links to missing tag ' + m[1]);
+    }
+  });
+
   test('README links to files that exist', () => {
     for (const m of read('README.md').matchAll(/\]\((?!https?:)([A-Za-z0-9_./-]+\.md)\)/g)) {
       assert.equal(exists(m[1]), true, 'README links to missing ' + m[1]);

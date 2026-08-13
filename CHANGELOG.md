@@ -136,8 +136,8 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
-[1.5.0]: https://github.com/Alfafis/critique/releases/tag/v1.5.0
-[1.4.0]: https://github.com/Alfafis/critique/releases/tag/v1.4.0
+[1.5.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.0
+[1.4.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.4.0
 [1.3.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.3.1
 [1.3.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.3.0
 [1.2.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.2.0
