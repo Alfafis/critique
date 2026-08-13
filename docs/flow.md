@@ -9,7 +9,7 @@ New Claude Code session
                     ├── Detects language (CRITIQUE_LANG → LANG/LC_ALL → Windows locale → Intl → 'en')
                     ├── Writes ~/.claude/.critique-active  →  "active:[lang]:[unix_timestamp]"
                     ├── Removes legacy hook entries left in settings.json by ≤ 1.3.1
-                    ├── Copies critica-statusline.[sh|ps1] to ~/.claude/hooks/
+                    ├── Refreshes the badge script — only if the user installed one
                     └── Outputs activation banner to model (in detected language)
 ```
 
@@ -26,10 +26,19 @@ overwriting it would destroy the user's `model`, `permissions`, `env`, and MCP c
 
 ### Writes to settings.json
 
-Only two things are ever written: removal of legacy critique hooks, and `statusLine` when the
-user has none. Both go through a `mkdir`-based lock in `~/.claude/.critique-settings.lock` so
-two sessions starting at once cannot lose each other's write. Locks older than 10s are treated
-as orphaned and broken.
+A session start writes **nothing** to `settings.json`. The single exception is the legacy hook
+migration above, which only ever *removes* this plugin's own stale entries and does not write at
+all when there is nothing to remove. Everything else that touches global config is behind
+`/critique:badge`, which the user runs deliberately.
+
+Until 1.4.0 the badge installed itself on first activation: it set `statusLine` and appended a
+call into whatever statusline script the user owned, without being asked. That is configuration
+outside the plugin's own directory, changed on the user's behalf — and it is the same mechanism
+that produced the bug that erased `settings.json`.
+
+Every write goes through a `mkdir`-based lock in `~/.claude/.critique-settings.lock` so two
+sessions starting at once cannot lose each other's write. Locks older than 10s are treated as
+orphaned and broken. A `settings.json` that does not parse is never written over.
 
 ## Per-turn reinforcement
 
@@ -168,16 +177,19 @@ hooks/hooks.json            Sole hook registration (SessionStart + UserPromptSub
 └── marketplace.json        Marketplace manifest
 
 src/hooks/
-├── critica-activate.js     SessionStart hook — init, flag write, legacy cleanup, statusline setup
+├── critica-activate.js     SessionStart hook — flag write, legacy cleanup, badge refresh
 ├── critica-tracker.js      UserPromptSubmit hook — per-turn flag check, pattern matching, injection
+├── critica-settings.js     Shared settings.json read/write + cross-process lock
+├── critica-badge.js        Badge install/remove/status CLI, and the refresh-only path
 ├── critica-statusline.sh   Bash statusline badge renderer
 ├── critica-statusline.ps1  PowerShell statusline badge renderer
-└── __tests__/              node:test suites for both hooks
+└── __tests__/              node:test suites, one per module
 
 skills/
 ├── critique/SKILL.md       /critique — persistent critical mindset
 ├── scan/SKILL.md           /scan — one-shot blocker scan
-└── rigorous/SKILL.md       /rigorous — deep analysis with phased protocol
+├── rigorous/SKILL.md       /rigorous — deep analysis with phased protocol
+└── badge/SKILL.md          /badge — install, remove or check the statusline badge
 ```
 
 The manifests used to be duplicated at the repo root. A release then had to bump the version in
@@ -185,10 +197,26 @@ two files; `.claude-plugin/` is the location Claude Code reads, so the root copi
 
 ## Statusline badge injection
 
+`/critique:badge` runs `src/hooks/critica-badge.js`, which is also the module SessionStart calls
+for the refresh-only path. Three verbs:
+
+| Verb | Effect |
+|---|---|
+| *(none)* | Copy the script to `~/.claude/hooks/`, then set `statusLine` if there is none, or splice a call into the existing statusline script |
+| `off` | Remove the marked block, or the `statusLine` entry if the plugin set it, then delete the copied script |
+| `status` | Report whether the badge is installed and registered |
+
+`off` is an exact inverse: a script the user owned comes back byte-identical, because only the
+lines between the markers are removed.
+
 When the user already has a `statusLine`, the badge call is spliced into their script **before
 the last `exit` statement**, wrapped in `# >>> critique badge >>>` / `# <<< critique badge <<<`
 markers. Appending at the end — what 1.3.x did — put the call after the `exit 0` that aggregator
 scripts commonly end with, so the badge never rendered while the function reported success.
+
+SessionStart calls `refreshIfInstalled()`, which re-copies the script **only when one is already
+there**. That keeps an existing badge current across plugin upgrades — the flag format lives in
+both the renderer and the tracker — without ever creating one the user did not ask for.
 
 ### Quoting, per platform
 

@@ -54,6 +54,12 @@ pre-flight → security audit → implementation audit → structured output →
 
 Supports focused modes: `/rigorous plan <task>` · `/rigorous sec` · `/rigorous impl` · `/rigorous code`
 
+### `/scan`
+One-shot scan of what was just shown. Critical blockers only, no persistence, no style commentary.
+
+### `/badge`
+Install, remove, or check the `[CRITIQUE]` statusline badge. See [Statusline badge](#statusline-badge-opt-in).
+
 ---
 
 ## Install
@@ -100,19 +106,25 @@ Then install:
 /plugin install critique@critique
 ```
 
-### Statusline badge
+### Statusline badge (opt-in)
 
-Automatic on first activation — the plugin copies the badge script to `~/.claude/hooks/` and registers it in `settings.json`. Renders `[CRITIQUE]` in red when active.
+```
+/critique:badge
+```
 
-If you already have a statusline script, the badge call is spliced into it between these markers:
+Renders `[CRITIQUE]` in red in the statusline while the mode is active, and disappears when it is off.
+
+It is **not** installed automatically. Installing it changes configuration outside the plugin's own directory — it sets `statusLine` in `~/.claude/settings.json`, or, if you already have one, splices a call into your existing statusline script between these markers:
 
 ```shell
 # >>> critique badge >>>
-[ -f "…/critica-statusline.sh" ] && bash "…/critica-statusline.sh"
+[ -f '…/critica-statusline.sh' ] && bash '…/critica-statusline.sh'
 # <<< critique badge <<<
 ```
 
-Deleting that block removes the badge. The plugin never overwrites an existing `statusLine` setting.
+`/critique:badge off` reverses exactly that: it removes the marked block, or the `statusLine` entry if the plugin was the one that set it, then deletes the copied script. Content outside the markers is never touched. `/critique:badge status` reports the current state.
+
+Installing never overwrites an existing `statusLine`, and never writes over a `settings.json` it cannot parse.
 
 ---
 
