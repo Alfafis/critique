@@ -58,6 +58,20 @@ describe('documentation keeps up with the code', () => {
     }
   });
 
+  test('every release tag is reachable from main', () => {
+    // Squash merging discards the branch commit, so a tag created before the merge points at
+    // a commit that is not in main's history. This caught exactly that for 1.5.1.
+    const { execSync } = require('child_process');
+    const sh = c => execSync(c, { cwd: ROOT, encoding: 'utf8' }).trim();
+    for (const tag of sh('git tag').split('\n').filter(Boolean)) {
+      const sha = sh('git rev-list -n1 ' + tag);
+      let reachable = true;
+      try { execSync('git merge-base --is-ancestor ' + sha + ' main', { cwd: ROOT }); }
+      catch (e) { reachable = false; }
+      assert.ok(reachable, tag + ' points at ' + sha.slice(0, 7) + ', which is not in main');
+    }
+  });
+
   test('README links to files that exist', () => {
     for (const m of read('README.md').matchAll(/\]\((?!https?:)([A-Za-z0-9_./-]+\.md)\)/g)) {
       assert.equal(exists(m[1]), true, 'README links to missing ' + m[1]);
