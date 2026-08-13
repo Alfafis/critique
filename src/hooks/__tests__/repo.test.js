@@ -77,6 +77,19 @@ describe('documentation keeps up with the code', () => {
     }
   });
 
+  // A typo in the install command is invisible in review and fatal for a first-time user:
+  // the command fails and there is nothing to debug. `Alfayfis/critique` shipped into a draft
+  // of this README once.
+  test('every owner/repo slug in the docs matches the real repository', () => {
+    const expected = JSON.parse(read('.claude-plugin/plugin.json'))
+      .repository.replace(/^https:\/\/github\.com\//, '');
+    for (const file of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md']) {
+      for (const m of read(file).matchAll(/\b[A-Za-z0-9_-]+\/critique\b/g)) {
+        assert.equal(m[0], expected, file + ' references "' + m[0] + '", expected "' + expected + '"');
+      }
+    }
+  });
+
   test('README links to files that exist', () => {
     for (const m of read('README.md').matchAll(/\]\((?!https?:)([A-Za-z0-9_./-]+\.md)\)/g)) {
       assert.equal(exists(m[1]), true, 'README links to missing ' + m[1]);

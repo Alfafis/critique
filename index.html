@@ -630,10 +630,23 @@ body::before {
     <div class="wrap--narrow">
       <p class="section-label" aria-hidden="true">§ install</p>
       <h2 class="section-title" id="h-install">Get started</h2>
-      <p class="section-sub">Two options. Both take under a minute.</p>
+      <p class="section-sub">Two commands. Works on any machine, no other marketplace needed.</p>
 
       <div class="reveal">
-        <p class="opt-label">Option 1 — extraKnownMarketplaces</p>
+        <p class="opt-label">Option 1 — direct (recommended)</p>
+
+        <div class="code-block">
+          <div class="code-block-bar">
+            <span class="code-block-name">Claude Code</span>
+            <button class="copy-btn" id="cp-direct" aria-label="Copy direct install commands">copy</button>
+          </div>
+          <pre><span class="t-c">/plugin marketplace add Alfafis/critique</span>
+<span class="t-c">/plugin install critique@critique</span></pre>
+        </div>
+
+        <div class="or-divider" aria-hidden="true">or</div>
+
+        <p class="opt-label">Option 2 — extraKnownMarketplaces</p>
 
         <div class="code-block">
           <div class="code-block-bar">
@@ -662,21 +675,24 @@ body::before {
 
         <div class="or-divider" aria-hidden="true">or</div>
 
-        <p class="opt-label">Option 2 — community marketplace</p>
+        <p class="opt-label">Option 3 — community marketplace</p>
 
         <div class="code-block">
           <div class="code-block-bar">
             <span class="code-block-name">Claude Code</span>
             <button class="copy-btn" id="cp-community" aria-label="Copy community install command">copy</button>
           </div>
-          <pre><span class="t-c">/plugin install critique@claude-community</span></pre>
+          <pre><span class="t-c">/plugin marketplace add anthropics/claude-plugins-community</span>
+<span class="t-c">/plugin install critique@claude-community</span></pre>
         </div>
 
         <p class="pending-note">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
-          Pending community marketplace review — available soon.
+          The community catalog is not registered by default, so <code>/plugin</code> &rarr; Discover
+          will not find critique until you add it. It also pins a commit and syncs nightly, so it
+          can trail the direct install by a version.
         </p>
       </div>
     </div>
@@ -710,8 +726,9 @@ const COPY_TEXTS = {
     }
   }
 }`,
+  'cp-direct':    '/plugin marketplace add Alfafis/critique\n/plugin install critique@critique',
   'cp-install':   '/plugin install critique@critique',
-  'cp-community': '/plugin install critique@claude-community'
+  'cp-community': '/plugin marketplace add anthropics/claude-plugins-community\n/plugin install critique@claude-community'
 };
 
 document.querySelectorAll('.copy-btn').forEach(btn => {

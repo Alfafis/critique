@@ -8,6 +8,24 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries for 1.3.1 and earlier were reconstructed from commit history, so they are less detailed
 than the ones written as the work happened.
 
+## [1.5.3] — 2026-08-13
+
+### Changed
+
+- **Install docs now lead with the direct route.** `/plugin marketplace add Alfafis/critique`
+  followed by `/plugin install critique@critique` works on any machine with nothing else
+  registered. The community route is still documented, with what it actually implies.
+
+### Fixed
+
+- The README and homepage implied critique was findable through `/plugin` → Discover. It is not:
+  only `claude-plugins-official` is registered by default and critique is not in it, so Discover
+  finds nothing until the user adds the community marketplace themselves.
+- The homepage still said *"Pending community marketplace review — available soon."* The plugin
+  was approved in May.
+- The homepage's community install command omitted the `marketplace add` step, so copying it
+  failed.
+
 ## [1.5.2] — 2026-08-13
 
 ### Fixed
@@ -171,6 +189,7 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
+[1.5.3]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.3
 [1.5.2]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.2
 [1.5.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.1
 [1.5.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.0

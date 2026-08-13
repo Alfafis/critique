@@ -74,20 +74,32 @@ Install, remove, or check the `[CRITIQUE]` statusline badge. See [Statusline bad
 
 ## Install
 
-### Claude Code community marketplace
+Inside Claude Code:
 
-Add the community marketplace once, then install:
+```
+/plugin marketplace add Alfafis/critique
+/plugin install critique@critique
+```
+
+That is the whole thing. It works on any machine, with no other marketplace registered.
+
+### From the community marketplace
+
+critique is also in Anthropic's community catalog. That catalog is **not registered by default** —
+only `claude-plugins-official` is, and critique is not in it. So `/plugin` → Discover will not
+find critique until you add the community marketplace yourself:
 
 ```
 /plugin marketplace add anthropics/claude-plugins-community
 /plugin install critique@claude-community
 ```
 
-Or: `/plugin` → Discover → search `critique`.
+Either route installs the same plugin. The direct one is a version ahead more often, because the
+community catalog pins a commit and syncs nightly.
 
-### Direct from GitHub (CLI)
+### From your terminal
 
-Run in your terminal (outside Claude Code), or use `!` prefix inside Claude Code:
+Outside Claude Code, or with the `!` prefix inside it:
 
 ```shell
 claude plugin marketplace add Alfafis/critique && claude plugin install critique@critique
