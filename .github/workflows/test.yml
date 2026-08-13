@@ -1,8 +1,10 @@
 name: test
 
 on:
+  # Every branch, not just main. Filtering to main meant a feature branch could be
+  # pushed, reviewed and merged without the suite ever running — and the Windows job
+  # is the only place the PowerShell renderer executes at all.
   push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
