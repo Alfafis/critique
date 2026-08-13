@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries for 1.3.1 and earlier were reconstructed from commit history, so they are less detailed
 than the ones written as the work happened.
 
+## [1.5.1] — 2026-08-13
+
+### Fixed
+
+- **The flag was not written when the config directory did not exist yet.** `CLAUDE_CONFIG_DIR`
+  can point anywhere, and a first run can land before Claude Code has created `~/.claude`.
+  `writeFileSync` threw `ENOENT` into an empty `catch`, so the session start printed its banner
+  and persisted nothing: the badge stayed dark and the detected language was lost, falling back
+  to English on the next prompt. The directory is now created first. Present since 1.3.1.
+- **`npm test` did not run on Windows.** The script relied on the shell expanding
+  `__tests__/*.test.js`, which PowerShell and cmd do not do, so Node received the literal
+  pattern and exited with `Could not find '...\__tests__\*.test.js'`. Now `node --test`, which
+  discovers the files itself on every platform.
+
 ## [1.5.0] — 2026-08-13
 
 ### Changed
@@ -136,6 +150,7 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
+[1.5.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.1
 [1.5.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.0
 [1.4.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.4.0
 [1.3.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.3.1
