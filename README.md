@@ -101,13 +101,27 @@ Then install:
 
 Automatic on first activation — the plugin copies the badge script to `~/.claude/hooks/` and registers it in `settings.json`. Renders `[CRITIQUE]` in red when active.
 
+If you already have a statusline script, the badge call is spliced into it between these markers:
+
+```shell
+# >>> critique badge >>>
+[ -f "…/critica-statusline.sh" ] && bash "…/critica-statusline.sh"
+# <<< critique badge <<<
+```
+
+Deleting that block removes the badge. The plugin never overwrites an existing `statusLine` setting.
+
 ---
 
 ## Toggle
 
 **On:** automatic — hooks activate every session.
 
-**Off:** `critique off` · `disable critique` · `stop critique` · `desativa critica` · `sem critica`
+**Off:** `critique off` · `disable critique` · `stop critique` · `desativa critica` · `sem critica` · `desactiva critica` · `désactive critique`
+
+**Back on:** `critique on` · `enable critique` · `ativa critica` · `activa la critica` · `réactive critique`
+
+Off persists for the rest of the session and keeps your detected language. A new session starts active again — that is the plugin's default. The phrase has to name critique directly (`stop critique`, not `stop` somewhere in a sentence that happens to mention critique), so ordinary prompts never toggle it by accident.
 
 ---
 

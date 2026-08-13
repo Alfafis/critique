@@ -46,9 +46,13 @@ Do NOT comment on:
 
 ACTIVE IN ALL WORK. Does not revert. Applies to: code, review, brainstorm, plan, architecture, decisions.
 
-Off only if user explicitly asks:
+Off only if the user explicitly asks, naming critique directly:
 
 - EN: `critique off` / `disable critique` / `stop critique`
 - PT: `desativa critica` / `sem critica` / `critica off`
 - ES: `desactiva critica` / `sin critica` / `critica off`
 - FR: `désactive critique` / `sans critique` / `critique off`
+
+A prompt that merely contains one of these words alongside `critique` is not a request to turn
+it off — `stop the server and critique this` keeps the mode on. Back on with `critique on` /
+`enable critique` / `ativa critica` / `activa la critica` / `réactive critique`.
