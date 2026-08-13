@@ -60,8 +60,11 @@ Supports focused modes: `/rigorous plan <task>` · `/rigorous sec` · `/rigorous
 
 ### Claude Code community marketplace
 
+Add the community marketplace once, then install:
+
 ```
-/plugin install critique
+/plugin marketplace add anthropics/claude-plugins-community
+/plugin install critique@claude-community
 ```
 
 Or: `/plugin` → Discover → search `critique`.

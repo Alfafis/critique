@@ -9,6 +9,7 @@
   "plugins": [
     {
       "name": "critique",
+      "displayName": "Critique",
       "description": "Permanent critical mindset mode. Surfaces real bugs, questionable decisions, and unhandled edge cases — ordered by impact, no sugarcoating.",
       "source": "./",
       "category": "productivity",
