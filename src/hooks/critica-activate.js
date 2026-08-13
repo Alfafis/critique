@@ -3,25 +3,12 @@
 
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 
-const claudeDir = process.env.CLAUDE_CONFIG_DIR || path.join(os.homedir(), '.claude');
+const S = require('./critica-settings.js');
+const badge = require('./critica-badge.js');
+
+const claudeDir = S.claudeDir();
 const flagPath = path.join(claudeDir, '.critique-active');
-const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT || path.resolve(__dirname, '..', '..');
-
-const BADGE_BEGIN = '# >>> critique badge >>>';
-const BADGE_END = '# <<< critique badge <<<';
-const BADGE_BEGIN_PS = '# >>> critique badge >>>';
-const BADGE_END_PS = '# <<< critique badge <<<';
-
-// Sentinel for "settings.json exists but could not be understood". Distinct from {}
-// (file absent), because overwriting an unreadable settings.json destroys the user's
-// entire global config — model, permissions, env, MCP servers.
-const UNREADABLE = Symbol('settings-unreadable');
-
-function debug(where, message) {
-  if (process.env.DEBUG_CRITIQUE) process.stderr.write('[critica-activate] ' + where + ': ' + message + '\n');
-}
 
 // Refusing to write through a symlink stops an attacker from redirecting the flag at an
 // arbitrary file. Refusing and stopping there was a dead end: the flag stayed a symlink,
@@ -38,112 +25,37 @@ function safeWriteFlag(filePath, content) {
   } catch (e) {}
 }
 
-// --- settings.json access -------------------------------------------------
-
-// Returns {} when the file does not exist, UNREADABLE when it exists but is not
-// valid JSON object. Never returns {} for a file we failed to understand.
-function readSettings(settingsPath) {
-  let raw;
-  try {
-    raw = fs.readFileSync(settingsPath, 'utf8');
-  } catch (e) {
-    if (e.code === 'ENOENT') return {};
-    debug('readSettings', e.message);
-    return UNREADABLE;
-  }
-  if (raw.trim() === '') return {};
-  let parsed;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    debug('readSettings', 'invalid JSON — ' + e.message);
-    return UNREADABLE;
-  }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return UNREADABLE;
-  return parsed;
-}
-
-// Returns true on success. On Windows renameSync can throw EPERM/EBUSY when another
-// process (editor, antivirus, a concurrent Claude Code) has the target open, so the
-// temp file is always removed and the failure is reported rather than thrown — an
-// escaping exception would surface as a SessionStart hook crash.
-function writeSettings(settingsPath, settings) {
-  let mode = 0o600;
-  try { mode = fs.statSync(settingsPath).mode & 0o777; } catch (e) {}
-  const tmp = settingsPath + '.' + process.pid + '.tmp';
-  try {
-    fs.writeFileSync(tmp, JSON.stringify(settings, null, 2) + '\n', { encoding: 'utf8', mode });
-    fs.renameSync(tmp, settingsPath);
-    return true;
-  } catch (e) {
-    debug('writeSettings', e.message);
-    try { fs.unlinkSync(tmp); } catch (e2) {}
-    return false;
-  }
-}
-
-// Cross-process mutex around the read-modify-write cycle on settings.json.
-// mkdir is atomic on every platform; a lock older than STALE_MS is assumed
-// orphaned by a killed process and broken.
-function withSettingsLock(dir, fn) {
-  const lockDir = path.join(dir, '.critique-settings.lock');
-  const STALE_MS = 10000;
-  const ATTEMPTS = 50;
-  const sleepMs = 20;
-  for (let i = 0; i < ATTEMPTS; i++) {
-    try {
-      fs.mkdirSync(dir, { recursive: true });
-      fs.mkdirSync(lockDir);
-    } catch (e) {
-      if (e.code !== 'EEXIST') { debug('lock', e.message); return false; }
-      try {
-        if (Date.now() - fs.statSync(lockDir).mtimeMs > STALE_MS) {
-          fs.rmdirSync(lockDir);
-          continue;
-        }
-      } catch (e2) {}
-      try { Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, sleepMs); } catch (e3) {}
-      continue;
-    }
-    try {
-      return fn();
-    } finally {
-      try { fs.rmdirSync(lockDir); } catch (e) {}
-    }
-  }
-  debug('lock', 'timed out waiting for settings lock');
-  return false;
-}
-
-// --- legacy hook cleanup --------------------------------------------------
-
 function isCritiqueHook(hook) {
   const cmd = (hook && hook.command) || '';
   return cmd.includes('critica-activate') || cmd.includes('critica-tracker');
 }
 
-// Versions up to 1.3.1 copied this plugin's hooks into ~/.claude/settings.json
-// while hooks/hooks.json already declared them. Both fired, so every session start
-// and every prompt ran the hook twice. The settings.json copy also hardcoded the
-// versioned plugin cache path, so it pointed at a deleted directory after any
-// upgrade and survived uninstall. Remove those entries; hooks/hooks.json is the
-// single source of registration.
+// MIGRATION — remove in 1.6.0.
+//
+// Versions up to 1.3.1 copied this plugin's hooks into ~/.claude/settings.json while
+// hooks/hooks.json already declared them. Both fired, so every session start and every
+// prompt ran the hook twice. The settings.json copy also hardcoded the versioned plugin
+// cache path, so it pointed at a deleted directory after any upgrade and survived
+// uninstall. hooks/hooks.json is now the single source of registration.
+//
+// This is the only thing that writes to settings.json without the user asking, and it
+// only ever removes this plugin's own stale entries — it never adds anything, and it
+// does not write at all when there is nothing to remove.
 function cleanupLegacyHooks() {
-  const settingsPath = path.join(claudeDir, 'settings.json');
   try {
-    return runCleanup(settingsPath);
+    return runCleanup(S.settingsPath(claudeDir));
   } catch (e) {
-    debug('cleanupLegacyHooks', e.message);
+    S.debug('cleanupLegacyHooks', e.message);
     return false;
   }
 }
 
-function runCleanup(settingsPath) {
-  return withSettingsLock(claudeDir, () => {
-    const settings = readSettings(settingsPath);
-    if (settings === UNREADABLE) {
+function runCleanup(file) {
+  return S.withSettingsLock(claudeDir, () => {
+    const settings = S.readSettings(file);
+    if (settings === S.UNREADABLE) {
       process.stderr.write(
-        '[critique] ' + settingsPath + ' is not valid JSON — skipping legacy hook cleanup.\n' +
+        '[critique] ' + file + ' is not valid JSON — skipping legacy hook cleanup.\n' +
         'Fix the file to remove duplicated critique hooks.\n'
       );
       return false;
@@ -166,144 +78,9 @@ function runCleanup(settingsPath) {
     }
     if (!changed) return false;
     if (Object.keys(settings.hooks).length === 0) delete settings.hooks;
-    return writeSettings(settingsPath, settings);
+    return S.writeSettings(file, settings);
   });
 }
-
-// --- statusline badge -----------------------------------------------------
-
-function setupStatusline() {
-  try {
-    const isWindows = process.platform === 'win32';
-    const hooksDir = path.join(claudeDir, 'hooks');
-    try { fs.mkdirSync(hooksDir, { recursive: true }); } catch (e) {}
-
-    const scriptName = isWindows ? 'critica-statusline.ps1' : 'critica-statusline.sh';
-    const destPath = path.join(hooksDir, scriptName);
-    const srcPath = path.join(pluginRoot, 'src', 'hooks', scriptName);
-
-    fs.copyFileSync(srcPath, destPath);
-    if (!isWindows) fs.chmodSync(destPath, 0o755);
-
-    const settingsPath = path.join(claudeDir, 'settings.json');
-    withSettingsLock(claudeDir, () => {
-      const settings = readSettings(settingsPath);
-      if (settings === UNREADABLE) {
-        process.stderr.write(
-          '[critique] ' + settingsPath + ' is not valid JSON — statusline badge not registered.\n' +
-          'Fix the file, or add the badge manually: ' + destPath + '\n'
-        );
-        return false;
-      }
-      if (!settings.statusLine) {
-        settings.statusLine = { type: 'command', command: buildStatusLineCommand(destPath, isWindows) };
-        return writeSettings(settingsPath, settings);
-      }
-      const injected = injectIntoBadgeAggregator(settings.statusLine, destPath, isWindows);
-      if (!injected) {
-        process.stderr.write(
-          '[critique] statusline badge could not be injected — existing statusLine is not a shell script.\n' +
-          'To enable the [CRITIQUE] badge, set DEBUG_CRITIQUE=1 for details or manually add: ' + destPath + '\n'
-        );
-      }
-      return injected;
-    });
-  } catch (e) {
-    debug('statusline', e.message);
-  }
-}
-
-// The statusLine command is handed to a shell by Claude Code. On Windows that shell is
-// cmd.exe, which does not treat single quotes as quoting — a single-quoted path would
-// reach powershell.exe with the quotes intact and -File would fail. Double quotes are
-// required there. The backslashes are NOT escaped: JSON.stringify handles that when
-// settings.json is serialized, and pre-escaping produced a literal C:\\dir\\x.ps1.
-function buildStatusLineCommand(destPath, isWindows) {
-  return isWindows
-    ? 'powershell -NoProfile -ExecutionPolicy Bypass -File "' + destPath + '"'
-    : 'bash "' + destPath + '"';
-}
-
-function extractScriptPath(cmd, extension) {
-  for (const quote of ['"', "'"]) {
-    const m = cmd.match(new RegExp(quote + '([^' + quote + ']+\\.' + extension + ')' + quote, 'i'));
-    if (m) return m[1];
-  }
-  const bare = cmd.match(new RegExp('(\\S+\\.' + extension + ')', 'i'));
-  return bare ? bare[1] : null;
-}
-
-// Single-quote for the shell that will actually parse the injected line. Both bash and
-// PowerShell interpolate inside double quotes, so a path containing $ (legal in a
-// Windows username, e.g. C:\Users\dev$\...) would be mangled. Neither expands inside
-// single quotes; both escape an embedded single quote by their own rule.
-function shellQuote(value) {
-  return "'" + String(value).replace(/'/g, "'\\''") + "'";
-}
-
-function powershellQuote(value) {
-  return "'" + String(value).replace(/'/g, "''") + "'";
-}
-
-function buildBadgeCallBlock(critiqueBadgePath, isWindows) {
-  if (isWindows) {
-    const p = powershellQuote(critiqueBadgePath);
-    return [BADGE_BEGIN_PS, 'if (Test-Path ' + p + ') { & ' + p + ' }', BADGE_END_PS];
-  }
-  const p = shellQuote(critiqueBadgePath);
-  return [BADGE_BEGIN, '[ -f ' + p + ' ] && bash ' + p, BADGE_END];
-}
-
-function detectEol(content) {
-  return content.includes('\r\n') ? '\r\n' : '\n';
-}
-
-// Splices the badge call into the user's own statusline script, delimited by markers
-// so it can be located and removed later. Appending blindly is wrong: aggregator
-// scripts commonly end in `exit 0`, which makes a trailing line unreachable — the
-// badge silently never renders while this function reports success.
-//
-// blockLines is a line array, not a pre-joined string, so the target file's own line
-// ending wins. Splicing LF lines into a CRLF .ps1 leaves mixed endings.
-function spliceBadgeCall(content, blockLines, isWindows) {
-  const block = Array.isArray(blockLines) ? blockLines : String(blockLines).split(/\r?\n/);
-  const eol = detectEol(content);
-  const lines = content.split(/\r?\n/);
-  const exitRe = /^\s*exit\b/i;
-  let insertAt = -1;
-  for (let i = lines.length - 1; i >= 0; i--) {
-    if (exitRe.test(lines[i])) { insertAt = i; break; }
-  }
-  if (insertAt === -1) {
-    const needsEol = content.length > 0 && !/\r?\n$/.test(content);
-    return content + (needsEol ? eol : '') + block.join(eol) + eol;
-  }
-  lines.splice(insertAt, 0, ...block);
-  return lines.join(eol);
-}
-
-function injectIntoBadgeAggregator(statusLine, critiqueBadgePath, isWindows) {
-  try {
-    if (!statusLine || statusLine.type !== 'command') return false;
-    const cmd = statusLine.command || '';
-    const targetScript = extractScriptPath(cmd, isWindows ? 'ps1' : 'sh');
-    if (!targetScript) return false;
-    if (path.resolve(targetScript) === path.resolve(critiqueBadgePath)) return true;
-
-    let content;
-    try { content = fs.readFileSync(targetScript, 'utf8'); } catch (e) { return false; }
-    if (content.includes('critica-statusline')) return true;
-
-    const block = buildBadgeCallBlock(critiqueBadgePath, isWindows);
-    fs.writeFileSync(targetScript, spliceBadgeCall(content, block, isWindows), { encoding: 'utf8' });
-    return true;
-  } catch (e) {
-    debug('inject', e.message);
-    return false;
-  }
-}
-
-// --- language detection ---------------------------------------------------
 
 function detectLang() {
   const override = (process.env.CRITIQUE_LANG || '').toLowerCase();
@@ -406,25 +183,9 @@ if (require.main === module) {
   const lang = detectLang();
   safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
   cleanupLegacyHooks();
-  setupStatusline();
+  // Only refreshes a badge the user installed with /critique:badge. Never creates one.
+  badge.refreshIfInstalled(claudeDir, process.platform === 'win32');
   process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
 }
 
-module.exports = {
-  UNREADABLE,
-  safeWriteFlag,
-  readSettings,
-  writeSettings,
-  withSettingsLock,
-  cleanupLegacyHooks,
-  setupStatusline,
-  buildStatusLineCommand,
-  buildBadgeCallBlock,
-  shellQuote,
-  powershellQuote,
-  extractScriptPath,
-  spliceBadgeCall,
-  injectIntoBadgeAggregator,
-  detectLang,
-  MESSAGES,
-};
+module.exports = { safeWriteFlag, cleanupLegacyHooks, detectLang, MESSAGES };
