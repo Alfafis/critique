@@ -58,8 +58,17 @@ git log --show-signature -1
 
 1. Bump `version` in `.claude-plugin/plugin.json` — it is the only place the version lives
 2. Add the matching `## [x.y.z]` section to `CHANGELOG.md`, with a link to the tag at the bottom
-3. Tag the release commit as `critique--vX.Y.Z`
-4. Push the tag: `git push origin critique--vX.Y.Z`
+3. Open the pull request and merge it
+4. **Then** tag, on `main`, after pulling: `git tag -a critique--vX.Y.Z -m "..."`
+5. Push the tag: `git push origin critique--vX.Y.Z`
+
+Step 4 comes after the merge on purpose. Squash merging discards the branch commit and creates a
+new one on `main`, so a tag made on the branch beforehand ends up pointing at a commit that is
+not in `main`'s history. Check with:
+
+```shell
+git merge-base --is-ancestor "$(git rev-list -n1 critique--vX.Y.Z)" main && echo ok
+```
 
 `src/hooks/__tests__/repo.test.js` fails the suite if step 2 is skipped, or if a CHANGELOG link
 points at a tag that does not exist.
