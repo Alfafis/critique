@@ -8,6 +8,30 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries for 1.3.1 and earlier were reconstructed from commit history, so they are less detailed
 than the ones written as the work happened.
 
+## [1.5.4] — 2026-08-14
+
+### Fixed
+
+- **The per-turn directive was English regardless of the configured language.** The activation
+  banner is translated and the flag already carries the detected language, but the reinforcement
+  injected on every prompt was a single English string — so `CRITIQUE_LANG=pt` produced a
+  Portuguese banner at session start and an English directive on every turn after it. The
+  translations are back, keyed by the language in the flag, and a test now fails if a language
+  gains a banner without a matching directive.
+
+- **The legacy hook migration could never finish.** Versions up to 1.3.1 re-install their
+  `settings.json` entries from *both* of their hooks, so removing them at session start was
+  undone by the old tracker on the very next prompt. The migration lost that race every session
+  and left no symptom other than the directive arriving twice — one machine ran that way for 91
+  session starts. The cleanup now also runs at `SessionEnd`, after the last prompt and before
+  anything can re-add the entries, so the next session starts clean and the legacy hooks never
+  run again.
+
+- **A migration that keeps having work to do now says so.** Two consecutive session starts that
+  still find entries to remove mean something outside the plugin is undoing the cleanup. The
+  activation banner reports it and names the block to delete, instead of the loop running forever
+  in silence.
+
 ## [1.5.3] — 2026-08-13
 
 ### Changed
@@ -189,6 +213,7 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
+[1.5.4]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.4
 [1.5.3]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.3
 [1.5.2]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.2
 [1.5.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.1
