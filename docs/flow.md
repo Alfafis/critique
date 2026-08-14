@@ -20,9 +20,17 @@ into `~/.claude/settings.json`, so both fired: the banner and the per-turn `addi
 were injected twice on every turn. That copy also hardcoded the versioned plugin cache path
 (`…/critique/1.3.1/src/hooks/…`), which broke on upgrade and survived uninstall.
 
-`cleanupLegacyHooks()` deletes those entries on the next session start. It never touches
-third-party hooks, and it aborts rather than writing when `settings.json` is not valid JSON —
-overwriting it would destroy the user's `model`, `permissions`, `env`, and MCP config.
+`cleanupLegacyHooks()` deletes those entries. It never touches third-party hooks, and it aborts
+rather than writing when `settings.json` is not valid JSON — overwriting it would destroy the
+user's `model`, `permissions`, `env`, and MCP config.
+
+Deleting them at session start alone never finished the job. The entries point at ≤ 1.3.1, whose
+*activate and tracker both re-install them*, so the old tracker put the pair back on the very next
+prompt: the migration lost that race on every session, silently, for as long as the entries
+existed. Since 1.5.4 the cleanup also runs at `SessionEnd` — after the last prompt of the session,
+when nothing is left to re-add them — so the next session starts clean and the legacy hooks never
+run again. If a session start still finds entries to remove twice in a row, something outside the
+plugin is undoing the migration and the activation banner says so, naming the block to delete.
 
 ### Writes to settings.json
 
@@ -171,7 +179,7 @@ critique on             → hook reactivated, flag refreshed
 ## Source files
 
 ```
-hooks/hooks.json            Sole hook registration (SessionStart + UserPromptSubmit)
+hooks/hooks.json            Sole hook registration (SessionStart + UserPromptSubmit + SessionEnd)
 .claude-plugin/
 ├── plugin.json             Plugin manifest — version lives here only
 └── marketplace.json        Marketplace manifest
@@ -179,6 +187,7 @@ hooks/hooks.json            Sole hook registration (SessionStart + UserPromptSub
 src/hooks/
 ├── critica-activate.js     SessionStart hook — flag write, legacy cleanup, badge refresh
 ├── critica-tracker.js      UserPromptSubmit hook — per-turn flag check, pattern matching, injection
+├── critica-cleanup.js      SessionEnd hook — last-writer removal of ≤ 1.3.1 settings.json entries
 ├── critica-settings.js     Shared settings.json read/write + cross-process lock
 ├── critica-badge.js        Badge install/remove/status CLI, and the refresh-only path
 ├── critica-statusline.sh   Bash statusline badge renderer

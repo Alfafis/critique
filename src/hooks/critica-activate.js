@@ -9,6 +9,7 @@ const badge = require('./critica-badge.js');
 
 const claudeDir = S.claudeDir();
 const flagPath = path.join(claudeDir, '.critique-active');
+const cleanupCountPath = path.join(claudeDir, '.critique-legacy-cleanup');
 
 // Refusing to write through a symlink stops an attacker from redirecting the flag at an
 // arbitrary file. Refusing and stopping there was a dead end: the flag stayed a symlink,
@@ -88,6 +89,56 @@ function runCleanup(file) {
     return S.writeSettings(file, settings);
   });
 }
+
+// A cleanup that keeps having work to do is not a migration finishing — it is a fight.
+// Versions up to 1.3.1 re-add their settings.json entries from BOTH of their hooks, so
+// while one of those entries survives in settings.json, the old activate and the old
+// tracker put the pair back on every session start and every prompt. Removing them once
+// per session start can never win that race, and it loses in silence: the only symptom
+// is the reinforcement arriving twice, which reads like a quirk rather than a bug. This
+// counts consecutive session starts that still found something to remove, so the loop can
+// be reported instead of run forever. The count resets as soon as a start comes up clean.
+function noteCleanup(removed) {
+  let count = 0;
+  try {
+    const raw = fs.readFileSync(cleanupCountPath, 'utf8').trim();
+    if (/^\d{1,6}$/.test(raw)) count = parseInt(raw, 10);
+  } catch (e) {}
+  if (!removed) {
+    if (count > 0) { try { fs.unlinkSync(cleanupCountPath); } catch (e) {} }
+    return 0;
+  }
+  count += 1;
+  safeWriteFlag(cleanupCountPath, String(count));
+  return count;
+}
+
+const LOOP_WARNINGS = {
+  en:
+    '\n\n---\n\n**critique — action needed.** Duplicate hooks were removed from `settings.json` ' +
+    'again this session, which means an install of 1.3.1 or older is still registered there and ' +
+    'keeps putting them back. Every prompt is being sent two copies of the same directive. Delete ' +
+    'the `hooks` block that names `critica-activate.js` / `critica-tracker.js` from ' +
+    '`~/.claude/settings.json` — the plugin registers its own hooks and needs no entry there.',
+  pt:
+    '\n\n---\n\n**critique — ação necessária.** Hooks duplicados foram removidos do `settings.json` ' +
+    'de novo nesta sessão, o que significa que uma instalação 1.3.1 ou anterior continua registrada ' +
+    'lá e os recoloca. Cada prompt está recebendo duas cópias da mesma diretiva. Apague do ' +
+    '`~/.claude/settings.json` o bloco `hooks` que cita `critica-activate.js` / `critica-tracker.js` — ' +
+    'o plugin registra os próprios hooks e não precisa de entrada ali.',
+  es:
+    '\n\n---\n\n**critique — acción necesaria.** Se volvieron a eliminar hooks duplicados de ' +
+    '`settings.json` en esta sesión, lo que significa que una instalación 1.3.1 o anterior sigue ' +
+    'registrada ahí y los vuelve a poner. Cada prompt recibe dos copias de la misma directiva. Borra ' +
+    'de `~/.claude/settings.json` el bloque `hooks` que menciona `critica-activate.js` / ' +
+    '`critica-tracker.js` — el plugin registra sus propios hooks y no necesita esa entrada.',
+  fr:
+    '\n\n---\n\n**critique — action requise.** Des hooks en double ont encore été retirés de ' +
+    '`settings.json` cette session : une installation 1.3.1 ou antérieure y est toujours enregistrée ' +
+    'et les remet. Chaque prompt reçoit deux copies de la même directive. Supprimez de ' +
+    '`~/.claude/settings.json` le bloc `hooks` qui nomme `critica-activate.js` / `critica-tracker.js` — ' +
+    'le plugin enregistre ses propres hooks et n\'a pas besoin de cette entrée.',
+};
 
 function detectLang() {
   const override = (process.env.CRITIQUE_LANG || '').toLowerCase();
@@ -189,10 +240,14 @@ const MESSAGES = {
 if (require.main === module) {
   const lang = detectLang();
   safeWriteFlag(flagPath, 'active:' + lang + ':' + Math.floor(Date.now() / 1000));
-  cleanupLegacyHooks();
+  const rounds = noteCleanup(cleanupLegacyHooks());
   // Only refreshes a badge the user installed with /critique:badge. Never creates one.
   badge.refreshIfInstalled(claudeDir, process.platform === 'win32');
-  process.stdout.write(MESSAGES[lang] || MESSAGES['en']);
+  let out = MESSAGES[lang] || MESSAGES['en'];
+  // One clean-up is the migration doing its job. A second consecutive one means something
+  // is undoing it between sessions, and only the user can end that.
+  if (rounds >= 2) out += LOOP_WARNINGS[lang] || LOOP_WARNINGS['en'];
+  process.stdout.write(out);
 }
 
-module.exports = { safeWriteFlag, cleanupLegacyHooks, detectLang, MESSAGES };
+module.exports = { safeWriteFlag, cleanupLegacyHooks, noteCleanup, detectLang, MESSAGES, LOOP_WARNINGS };
