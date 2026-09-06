@@ -198,7 +198,7 @@ const MESSAGES = {
     'Só o que realmente quebra ou causa dano.\n\n' +
     '**Decisões questionáveis** — escolhas de design, arquitetura ou implementação que vão criar problema no futuro. ' +
     'Explique por que e qual seria a alternativa melhor.\n\n' +
-    '**O que está bom** — só mencione se for não óbvio e vale reforçar. Não elogie o básico.\n\n' +
+    '**O que está bom** — só mencione se for não óbvio e vale reforçar. Não elogie o óbvio.\n\n' +
     '**Prioridade** — ordene os achados por impacto real, não por facilidade de fix.\n\n' +
     'Sem suavizar. Sem "mas no geral está ótimo". Se tem problema sério, diga que é sério.\n\n' +
     '## Persistência\n\n' +
@@ -213,7 +213,7 @@ const MESSAGES = {
     'Solo lo que realmente rompe o causa daño.\n\n' +
     '**Decisiones cuestionables** — elecciones de diseño, arquitectura o implementación que causarán problemas en el futuro. ' +
     'Explica por qué y cuál sería la mejor alternativa.\n\n' +
-    '**Lo que está bien** — menciona solo si no es obvio y vale la pena reforzar. No elogies lo básico.\n\n' +
+    '**Lo que está bien** — menciona solo si no es obvio y vale la pena reforzar. No elogies lo obvio.\n\n' +
     '**Prioridad** — ordena los hallazgos por impacto real, no por facilidad de fix.\n\n' +
     'Sin suavizar. Sin "pero en general se ve bien". Si hay un problema serio, di que es serio.\n\n' +
     '## Persistencia\n\n' +
