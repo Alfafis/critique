@@ -29,20 +29,59 @@ const ON_VERB = '(?:enable|activate|turn\\s+on|switch\\s+on|reactivate|ativa(?:r
 const OFF_RE = new RegExp('\\b' + NAME + '\\s+off\\b|\\b' + OFF_VERB + ART + '\\s+' + NAME + '\\b', 'i');
 const ON_RE = new RegExp('\\b' + NAME + '\\s+on\\b|\\b' + ON_VERB + ART + '\\s+' + NAME + '\\b', 'i');
 
-const ADDITIONAL_CONTEXT =
-  'CRITIQUE MODE ACTIVE (medium). Surface real problems first. ' +
-  'Speak on: code with logic/auth/state, architecture decisions, specs being elaborated. ' +
-  'Stay silent on: trivial tasks (typo/rename/<50 lines), mechanical execution of approved instructions, issues already raised. ' +
-  'Adapt focus: code→bugs+security+edge cases; spec/plan→assumptions+YAGNI; architecture→coupling+tradeoffs. ' +
-  'Questionable decisions: explain why and what\'s better. ' +
-  'Praise only the non-obvious. Order by impact. No sugarcoating.';
+// Per-turn reinforcement, keyed by locale — mirrors MESSAGES in critica-activate.js.
+//
+// This was a single English string until 1.5.4. The flag already carried the detected
+// language and handlePrompt already read it, so a user who set CRITIQUE_LANG=pt got a
+// Portuguese banner at session start and an English directive on every turn after it —
+// the plugin contradicting its own configuration, silently, forever.
+const REINFORCEMENT = {
+  en:
+    'CRITIQUE MODE ACTIVE (medium). Surface real problems first. ' +
+    'Speak on: code with logic/auth/state, architecture decisions, specs being elaborated. ' +
+    'Stay silent on: trivial tasks (typo/rename/<50 lines), mechanical execution of approved instructions, issues already raised. ' +
+    'Adapt focus: code→bugs+security+edge cases; spec/plan→assumptions+YAGNI; architecture→coupling+tradeoffs. ' +
+    'Questionable decisions: explain why and what\'s better. ' +
+    'Praise only the non-obvious. Order by impact. No sugarcoating.',
+
+  pt:
+    'MODO CRÍTICA ATIVO (medium). Traga os problemas reais primeiro. ' +
+    'Fale sobre: código com lógica/auth/estado, decisões de arquitetura, specs em elaboração. ' +
+    'Fique calado sobre: tarefas triviais (typo/rename/<50 linhas), execução mecânica de instruções já aprovadas, questões já levantadas. ' +
+    'Adapte o foco: código→bugs+segurança+edge cases; spec/plano→premissas+YAGNI; arquitetura→acoplamento+tradeoffs. ' +
+    'Decisões questionáveis: explique por que e qual é a alternativa melhor. ' +
+    'Elogie só o não óbvio. Ordene por impacto. Sem suavizar.',
+
+  es:
+    'MODO CRÍTICA ACTIVO (medium). Saca primero los problemas reales. ' +
+    'Habla sobre: código con lógica/auth/estado, decisiones de arquitectura, specs en elaboración. ' +
+    'Quédate callado sobre: tareas triviales (typo/rename/<50 líneas), ejecución mecánica de instrucciones ya aprobadas, cuestiones ya planteadas. ' +
+    'Adapta el foco: código→bugs+seguridad+casos límite; spec/plan→supuestos+YAGNI; arquitectura→acoplamiento+tradeoffs. ' +
+    'Decisiones cuestionables: explica por qué y cuál es la mejor alternativa. ' +
+    'Elogia solo lo no obvio. Ordena por impacto. Sin suavizar.',
+
+  fr:
+    'MODE CRITIQUE ACTIF (medium). Remonte d\'abord les vrais problèmes. ' +
+    'Parle de : code avec logique/auth/état, décisions d\'architecture, specs en cours d\'élaboration. ' +
+    'Reste silencieux sur : tâches triviales (typo/rename/<50 lignes), exécution mécanique d\'instructions déjà approuvées, points déjà soulevés. ' +
+    'Adapte le focus : code→bugs+sécurité+cas limites ; spec/plan→hypothèses+YAGNI ; architecture→couplage+tradeoffs. ' +
+    'Décisions discutables : explique pourquoi et quelle est la meilleure alternative. ' +
+    'Ne loue que le non évident. Trie par impact. Pas de ménagement.',
+};
 
 // Kept in sync with critica-activate.js. Unlinking a symlinked flag removes the link,
 // never its target: the redirect guard holds and the flag stops being a permanent
 // dead end. See the comment there.
 function safeWriteFlag(filePath, content) {
   try {
-    try { if (fs.lstatSync(path.dirname(filePath)).isSymbolicLink()) return; } catch (e) {}
+    // The config directory may not exist yet — CLAUDE_CONFIG_DIR can point anywhere, and a
+    // first run can land before Claude Code has created it. Without this, writeFileSync threw
+    // ENOENT into the empty catch below and the flag was never written: the session start
+    // produced its banner but persisted nothing, so the badge stayed dark and the detected
+    // language was lost. Present since 1.3.1.
+    const dir = path.dirname(filePath);
+    try { fs.mkdirSync(dir, { recursive: true }); } catch (e) {}
+    try { if (fs.lstatSync(dir).isSymbolicLink()) return; } catch (e) {}
     try { if (fs.lstatSync(filePath).isSymbolicLink()) fs.unlinkSync(filePath); } catch (e) {}
     const tmp = filePath + '.' + process.pid + '.tmp';
     fs.writeFileSync(tmp, content, { encoding: 'utf8', mode: 0o600 });
@@ -88,11 +127,21 @@ function spawnActivate() {
   } catch (e) {}
 }
 
-function injection() {
+// Claude Code writes the hook payload straight to this process's stdin and never emits a BOM,
+// but a PowerShell 5.1 pipe does — and JSON.parse then throws into the caller's catch, so
+// critique stops injecting with no signal anywhere. The manual commands in CONTRIBUTING run
+// through exactly such a pipe. U+FEFF is written as an escape on purpose: as a literal it is
+// invisible in an editor and one careless reformat silently removes the guard.
+function readPrompt(raw) {
+  const data = JSON.parse(String(raw).replace(/^\uFEFF/, ''));
+  return (data.prompt || '').trim();
+}
+
+function injection(lang) {
   return JSON.stringify({
     hookSpecificOutput: {
       hookEventName: 'UserPromptSubmit',
-      additionalContext: ADDITIONAL_CONTEXT
+      additionalContext: REINFORCEMENT[lang] || REINFORCEMENT.en
     }
   });
 }
@@ -118,7 +167,9 @@ function handlePrompt(prompt, fp) {
     spawnActivate();
     // Write flag now so critique injects this turn; activate.js will overwrite with correct locale
     safeWriteFlag(file, 'active:en:' + now);
-    return injection();
+    // English on purpose: the locale is not known until activate.js finishes, and the
+    // flag written above says so. From the next turn on it follows the detected one.
+    return injection('en');
   }
 
   // File is present but unreadable, symlinked, oversized, or malformed. Stay silent
@@ -128,7 +179,7 @@ function handlePrompt(prompt, fp) {
   if (now - flag.ts > TTL) return null;
 
   safeWriteFlag(file, 'active:' + flag.lang + ':' + now);
-  return injection();
+  return injection(flag.lang);
 }
 
 if (require.main === module) {
@@ -136,8 +187,7 @@ if (require.main === module) {
   process.stdin.on('data', chunk => { input += chunk; });
   process.stdin.on('end', () => {
     try {
-      const data = JSON.parse(input);
-      const prompt = (data.prompt || '').trim();
+      const prompt = readPrompt(input);
       const out = handlePrompt(prompt);
       if (out) process.stdout.write(out);
     } catch (e) {
@@ -146,4 +196,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { safeWriteFlag, readFlag, parseFlag, refreshFlag, handlePrompt, OFF_RE, ON_RE, TTL };
+module.exports = { safeWriteFlag, readFlag, parseFlag, refreshFlag, readPrompt, handlePrompt, REINFORCEMENT, OFF_RE, ON_RE, TTL };

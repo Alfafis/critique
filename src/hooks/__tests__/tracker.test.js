@@ -69,6 +69,38 @@ describe('readFlag', () => {
   });
 });
 
+describe('readPrompt', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  test('reads a plain payload', () => {
+    assert.equal(mod.readPrompt('{"prompt":"review this"}'), 'review this');
+  });
+
+  // A PowerShell 5.1 pipe prepends a UTF-8 BOM. Without stripping it, JSON.parse throws into
+  // the entrypoint's catch and critique silently stops injecting — found while validating on
+  // Windows 11 / Node 22.
+  test('tolerates a UTF-8 BOM', () => {
+    assert.equal(mod.readPrompt('﻿{"prompt":"review this"}'), 'review this');
+  });
+
+  test('strips only one leading BOM, not content', () => {
+    assert.equal(mod.readPrompt('﻿{"prompt":"a﻿b"}'), 'a﻿b');
+  });
+
+  test('trims surrounding whitespace', () => {
+    assert.equal(mod.readPrompt('{"prompt":"  spaced  "}'), 'spaced');
+  });
+
+  test('returns empty string when prompt is absent', () => {
+    assert.equal(mod.readPrompt('{}'), '');
+  });
+
+  test('still throws on genuinely malformed JSON', () => {
+    assert.throws(() => mod.readPrompt('{"prompt":'), SyntaxError);
+  });
+});
+
 describe('parseFlag', () => {
   beforeEach(setup);
   afterEach(teardown);
@@ -157,6 +189,29 @@ describe('handlePrompt — TTL', () => {
     writeFlag('pt', 500);
     mod.handlePrompt('hello world', flagFile);
     assert.ok(flagContent().startsWith('active:pt:'));
+  });
+
+  test('the injected directive follows the language in the flag', () => {
+    const expected = { pt: 'MODO CRÍTICA ATIVO', es: 'MODO CRÍTICA ACTIVO', fr: 'MODE CRITIQUE ACTIF' };
+    for (const lang of Object.keys(expected)) {
+      writeFlag(lang, 0);
+      const context = JSON.parse(mod.handlePrompt('hello world', flagFile)).hookSpecificOutput.additionalContext;
+      assert.ok(context.startsWith(expected[lang]),
+        lang + ' flag produced: ' + context.slice(0, 40));
+    }
+  });
+
+  // The activation banner was translated and the per-turn directive was not, so a user
+  // who set CRITIQUE_LANG=pt was told one thing at session start and another every turn.
+  test('every language in the activation banner also has a per-turn directive', () => {
+    const activate = require(path.resolve(__dirname, '..', 'critica-activate.js'));
+    assert.deepEqual(Object.keys(mod.REINFORCEMENT).sort(), Object.keys(activate.MESSAGES).sort());
+  });
+
+  test('an unknown language falls back to english rather than injecting nothing', () => {
+    writeFlag('de', 0);
+    const context = JSON.parse(mod.handlePrompt('hello world', flagFile)).hookSpecificOutput.additionalContext;
+    assert.ok(context.startsWith('CRITIQUE MODE ACTIVE'));
   });
 
   test('malformed flag stays silent instead of injecting', () => {

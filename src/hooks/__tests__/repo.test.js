@@ -50,11 +50,43 @@ describe('documentation keeps up with the code', () => {
     assert.ok(read('SECURITY.md').includes('security/advisories'));
   });
 
-  test('every CHANGELOG release link points at a tag that exists', () => {
+  // The version being released is exempt: the release checklist tags after the merge, because
+  // squash merging discards the branch commit. Between the CHANGELOG commit and the tag there
+  // is legitimately one link with no tag behind it — the current version, and only that one.
+  test('every CHANGELOG release link points at a tag that exists, except the one being released', () => {
     const { execSync } = require('child_process');
     const tags = new Set(execSync('git tag', { cwd: ROOT, encoding: 'utf8' }).split('\n').filter(Boolean));
+    const pending = 'critique--v' + JSON.parse(read('.claude-plugin/plugin.json')).version;
     for (const m of read('CHANGELOG.md').matchAll(/releases\/tag\/(\S+)/g)) {
+      if (m[1] === pending) continue;
       assert.ok(tags.has(m[1]), 'CHANGELOG links to missing tag ' + m[1]);
+    }
+  });
+
+  test('every release tag is reachable from main', () => {
+    // Squash merging discards the branch commit, so a tag created before the merge points at
+    // a commit that is not in main's history. This caught exactly that for 1.5.1.
+    const { execSync } = require('child_process');
+    const sh = c => execSync(c, { cwd: ROOT, encoding: 'utf8' }).trim();
+    for (const tag of sh('git tag').split('\n').filter(Boolean)) {
+      const sha = sh('git rev-list -n1 ' + tag);
+      let reachable = true;
+      try { execSync('git merge-base --is-ancestor ' + sha + ' main', { cwd: ROOT }); }
+      catch (e) { reachable = false; }
+      assert.ok(reachable, tag + ' points at ' + sha.slice(0, 7) + ', which is not in main');
+    }
+  });
+
+  // A typo in the install command is invisible in review and fatal for a first-time user:
+  // the command fails and there is nothing to debug. `Alfayfis/critique` shipped into a draft
+  // of this README once.
+  test('every owner/repo slug in the docs matches the real repository', () => {
+    const expected = JSON.parse(read('.claude-plugin/plugin.json'))
+      .repository.replace(/^https:\/\/github\.com\//, '');
+    for (const file of ['README.md', 'CONTRIBUTING.md', 'SECURITY.md']) {
+      for (const m of read(file).matchAll(/\b[A-Za-z0-9_-]+\/critique\b/g)) {
+        assert.equal(m[0], expected, file + ' references "' + m[0] + '", expected "' + expected + '"');
+      }
     }
   });
 

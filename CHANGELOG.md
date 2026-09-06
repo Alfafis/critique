@@ -8,6 +8,83 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Entries for 1.3.1 and earlier were reconstructed from commit history, so they are less detailed
 than the ones written as the work happened.
 
+## [1.5.4] — 2026-08-14
+
+### Fixed
+
+- **The per-turn directive was English regardless of the configured language.** The activation
+  banner is translated and the flag already carries the detected language, but the reinforcement
+  injected on every prompt was a single English string — so `CRITIQUE_LANG=pt` produced a
+  Portuguese banner at session start and an English directive on every turn after it. The
+  translations are back, keyed by the language in the flag, and a test now fails if a language
+  gains a banner without a matching directive.
+
+- **The legacy hook migration could never finish.** Versions up to 1.3.1 re-install their
+  `settings.json` entries from *both* of their hooks, so removing them at session start was
+  undone by the old tracker on the very next prompt. The migration lost that race every session
+  and left no symptom other than the directive arriving twice — one machine ran that way for 91
+  session starts. The cleanup now also runs at `SessionEnd`, after the last prompt and before
+  anything can re-add the entries, so the next session starts clean and the legacy hooks never
+  run again.
+
+- **A migration that keeps having work to do now says so.** Two consecutive session starts that
+  still find entries to remove mean something outside the plugin is undoing the cleanup. The
+  activation banner reports it and names the block to delete, instead of the loop running forever
+  in silence.
+
+## [1.5.3] — 2026-08-13
+
+### Changed
+
+- **Install docs now lead with the direct route.** `/plugin marketplace add Alfafis/critique`
+  followed by `/plugin install critique@critique` works on any machine with nothing else
+  registered. The community route is still documented, with what it actually implies.
+
+### Fixed
+
+- The README and homepage implied critique was findable through `/plugin` → Discover. It is not:
+  only `claude-plugins-official` is registered by default and critique is not in it, so Discover
+  finds nothing until the user adds the community marketplace themselves.
+- The homepage still said *"Pending community marketplace review — available soon."* The plugin
+  was approved in May.
+- The homepage's community install command omitted the `marketplace add` step, so copying it
+  failed.
+
+## [1.5.2] — 2026-08-13
+
+### Fixed
+
+- **A UTF-8 BOM on stdin stopped the plugin silently.** `JSON.parse` threw into the entrypoint's
+  `catch`, the hook exited 0, and critique simply stopped injecting with no signal anywhere.
+  Claude Code writes the payload directly and never emits a BOM, but a PowerShell 5.1 pipe does
+  — which is how the documented manual test commands are run. A leading BOM is now stripped.
+
+### Added
+
+- CONTRIBUTING documents the PowerShell 5.1 BOM behaviour, including writing a test
+  `settings.json` without one.
+
+### Verified
+
+- Full manual validation on Windows 11 (10.0.26200) with Node 22: unit suite, activation into a
+  non-existent config directory, the toggle, badge install and render through `cmd.exe`, and
+  splicing into a CRLF aggregator ending in `exit 0` with a byte-identical restore on `off`.
+  The `(Get-Culture)` branch of language detection ran for the first time and returned `pt`.
+
+## [1.5.1] — 2026-08-13
+
+### Fixed
+
+- **The flag was not written when the config directory did not exist yet.** `CLAUDE_CONFIG_DIR`
+  can point anywhere, and a first run can land before Claude Code has created `~/.claude`.
+  `writeFileSync` threw `ENOENT` into an empty `catch`, so the session start printed its banner
+  and persisted nothing: the badge stayed dark and the detected language was lost, falling back
+  to English on the next prompt. The directory is now created first. Present since 1.3.1.
+- **`npm test` did not run on Windows.** The script relied on the shell expanding
+  `__tests__/*.test.js`, which PowerShell and cmd do not do, so Node received the literal
+  pattern and exited with `Could not find '...\__tests__\*.test.js'`. Now `node --test`, which
+  discovers the files itself on every platform.
+
 ## [1.5.0] — 2026-08-13
 
 ### Changed
@@ -136,6 +213,10 @@ Nine defects found in a full audit. Every one had a reproduction before and afte
 - Initial release: `/critique` and `/rigorous` skills, `SessionStart` and `UserPromptSubmit`
   hooks, statusline badge renderers for bash and PowerShell.
 
+[1.5.4]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.4
+[1.5.3]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.3
+[1.5.2]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.2
+[1.5.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.1
 [1.5.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.5.0
 [1.4.0]: https://github.com/Alfafis/critique/releases/tag/critique--v1.4.0
 [1.3.1]: https://github.com/Alfafis/critique/releases/tag/critique--v1.3.1

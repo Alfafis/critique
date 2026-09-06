@@ -76,6 +76,31 @@ describe('safeWriteFlag', () => {
     assert.equal(fs.readFileSync(real, 'utf8'), 'original', 'target must be untouched');
   });
 
+  // CI caught this on all three runners: CLAUDE_CONFIG_DIR pointed at a directory that did
+  // not exist, writeFileSync threw ENOENT into the empty catch, and the flag was never
+  // written. The banner still printed, so the failure was invisible.
+  test('creates the config directory when it does not exist', () => {
+    const fresh = path.join(tmpDir, 'not-created-yet');
+    const flag = path.join(fresh, '.critique-active');
+    mod.safeWriteFlag(flag, 'active:pt:123');
+    assert.equal(fs.readFileSync(flag, 'utf8'), 'active:pt:123');
+  });
+
+  test('creates nested config directories', () => {
+    const flag = path.join(tmpDir, 'a', 'b', 'c', '.critique-active');
+    mod.safeWriteFlag(flag, 'active:en:1');
+    assert.equal(fs.existsSync(flag), true);
+  });
+
+  test('the first activation persists the flag, not only the second', () => {
+    const fresh = path.join(tmpDir, 'first-run');
+    const flag = path.join(fresh, '.critique-active');
+    mod.safeWriteFlag(flag, 'active:fr:' + Math.floor(Date.now() / 1000));
+    const tracker = freshRequire(TRACKER_PATH);
+    assert.notEqual(tracker.handlePrompt('review this', flag), null);
+    assert.equal(tracker.parseFlag(flag).lang, 'fr', 'detected language must survive the first run');
+  });
+
   test('refuses when the containing directory is a symlink (unix only)', () => {
     if (process.platform === 'win32') return;
     const realDir = path.join(tmpDir, 'realdir');
@@ -289,5 +314,79 @@ describe('detectLang', () => {
     for (const lang of ['en', 'pt', 'es', 'fr']) {
       assert.ok(mod.MESSAGES[lang], 'missing message for ' + lang);
     }
+  });
+});
+
+// A migration that keeps having work to do is losing a race, not finishing. Versions up
+// to 1.3.1 re-add their settings.json entries from both hooks, so a cleanup at session
+// start is undone on the next prompt — forever, and with no symptom other than the
+// directive arriving twice.
+describe('repeated cleanups are reported instead of run forever', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  const countPath = () => path.join(tmpDir, '.critique-legacy-cleanup');
+
+  test('the first cleanup is not treated as a loop', () => {
+    assert.equal(mod.noteCleanup(true), 1);
+  });
+
+  test('consecutive cleanups accumulate', () => {
+    mod.noteCleanup(true);
+    assert.equal(mod.noteCleanup(true), 2);
+    assert.equal(mod.noteCleanup(true), 3);
+  });
+
+  test('a clean session start resets the count and removes the file', () => {
+    mod.noteCleanup(true);
+    mod.noteCleanup(true);
+    assert.equal(mod.noteCleanup(false), 0);
+    assert.equal(fs.existsSync(countPath()), false);
+  });
+
+  test('a corrupted count starts over instead of throwing', () => {
+    fs.writeFileSync(countPath(), 'not a number');
+    assert.equal(mod.noteCleanup(true), 1);
+  });
+
+  test('nothing is written while there is nothing to clean up', () => {
+    assert.equal(mod.noteCleanup(false), 0);
+    assert.equal(fs.existsSync(countPath()), false);
+  });
+
+  test('every language that has a banner also has the loop warning', () => {
+    assert.deepEqual(Object.keys(mod.LOOP_WARNINGS).sort(), Object.keys(mod.MESSAGES).sort());
+  });
+
+  test('the warning names the file and the block the user has to edit', () => {
+    for (const lang of Object.keys(mod.LOOP_WARNINGS)) {
+      const text = mod.LOOP_WARNINGS[lang];
+      assert.ok(text.includes('settings.json'), lang + ' warning does not name the file');
+      assert.ok(text.includes('critica-tracker.js'), lang + ' warning does not name the hook to remove');
+    }
+  });
+});
+
+describe('SessionEnd cleanup', () => {
+  beforeEach(setup);
+  afterEach(teardown);
+
+  // Registered at SessionEnd on purpose: it is the only point that runs after the last
+  // prompt of the session, so the legacy tracker cannot re-add what it just removed.
+  test('the plugin registers the cleanup at SessionEnd', () => {
+    const hooks = JSON.parse(fs.readFileSync(path.join(PLUGIN_ROOT, 'hooks', 'hooks.json'), 'utf8')).hooks;
+    const commands = (hooks.SessionEnd || []).flatMap(g => g.hooks || []).map(h => h.command);
+    assert.equal(commands.length, 1);
+    assert.ok(commands[0].includes('critica-cleanup.js'));
+  });
+
+  test('the cleanup entry point removes the legacy hooks', () => {
+    fs.writeFileSync(settingsPath, JSON.stringify({
+      hooks: { UserPromptSubmit: [{ hooks: [critiqueHook('critica-tracker.js')] }] }
+    }));
+    const cleanup = freshRequire(path.resolve(__dirname, '..', 'critica-cleanup.js'));
+    assert.equal(cleanup.cleanupLegacyHooks(), true);
+    assert.equal(JSON.parse(fs.readFileSync(settingsPath, 'utf8')).hooks, undefined);
+    delete require.cache[require.resolve(path.resolve(__dirname, '..', 'critica-cleanup.js'))];
   });
 });
